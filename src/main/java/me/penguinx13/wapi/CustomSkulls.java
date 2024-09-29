@@ -19,7 +19,7 @@ public class CustomSkulls {
 
         SkullMeta headMeta = (SkullMeta) head.getItemMeta();
         GameProfile profile = new GameProfile(UUID.randomUUID(), null);
-        byte[] encodedData = Base64.encodeBase64(String.format("{textures:{SKIN:{url:\"%s\"}}}", url).getBytes());
+        byte[] encodedData = Base64.encodeBase64(url.getBytes());
         profile.getProperties().put("textures", new Property("textures", new String(encodedData)));
         Field profileField;
         try
