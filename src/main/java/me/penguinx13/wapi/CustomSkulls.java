@@ -3,7 +3,6 @@ package me.penguinx13.wapi;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
-import org.apache.commons.codec.binary.Base64;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -19,8 +18,7 @@ public class CustomSkulls {
 
         SkullMeta headMeta = (SkullMeta) head.getItemMeta();
         GameProfile profile = new GameProfile(UUID.randomUUID(), null);
-        byte[] encodedData = Base64.encodeBase64(url.getBytes());
-        profile.getProperties().put("textures", new Property("textures", new String(encodedData)));
+        profile.getProperties().put("textures", new Property("textures", url));
         Field profileField;
         try
         {
