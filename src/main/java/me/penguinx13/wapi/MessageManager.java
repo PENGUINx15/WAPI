@@ -18,7 +18,7 @@ public class MessageManager implements Listener {
     	this.plugin = plugin;
 	}
 
-	public void sendMessage(Player player, String message) {
+    public static void sendMessage(Player player, String message) {
         if (player != null && message != null) {
             message = PlaceholderAPI.setPlaceholders(player, message);
             List<String> result = splitText(message);
@@ -34,9 +34,9 @@ public class MessageManager implements Listener {
                 }
             }
         } else {
-            plugin.getLogger().info((player == null ? "Player" : "Message") + " is null");
+            System.out.println((player == null ? "Player" : "Message") + " is null");
         }
-	}
+    }
 
 	public void sendLog(String type , String message) {
 		if (message !=null ) {
