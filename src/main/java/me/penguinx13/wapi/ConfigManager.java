@@ -22,7 +22,7 @@ public class ConfigManager {
         }
     }
 
-    public FileConfiguration getConfig(String configName, String path) {
+    public FileConfiguration getConfig(String configName) {
         return  YamlConfiguration.loadConfiguration(new File(plugin.getDataFolder(), configName));
     }
 
