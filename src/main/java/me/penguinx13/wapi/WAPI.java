@@ -8,7 +8,7 @@ public final class WAPI extends JavaPlugin {
     public void onEnable() {
         getLogger().info("WAIP Enabled successful");
         ConfigManager configManager = new ConfigManager(this);
-        MessageManager messageManager = new MessageManager(this);
+        MessageManager messageManager = new MessageManager();
         CooldownManager cooldownManager = new CooldownManager();
     }
 
