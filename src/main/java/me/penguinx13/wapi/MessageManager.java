@@ -18,6 +18,8 @@ import java.util.regex.Pattern;
 
 public class MessageManager implements Listener {
 
+    private static  Plugin plugin;
+
     public static void sendMessage(Player player, String message) {
         if (player != null && message != null) {
             message = PlaceholderAPI.setPlaceholders(player, message);
@@ -34,7 +36,7 @@ public class MessageManager implements Listener {
                 } else if (line.contains("{json}")) {
                     message = line.replace("{json}", "").trim();
 
-                    System.out.println("Parsed JSON: " + message);
+                    sendLog(plugin ,"info","Parsed JSON: " + message);
 
                     try {
                         JsonObject jsonObject = JsonParser.parseString(message).getAsJsonObject();
@@ -53,16 +55,16 @@ public class MessageManager implements Listener {
                         player.spigot().sendMessage(jsonMessage);
 
                         // Отладочное сообщение, чтобы убедиться, что сообщение отправлено
-                        System.out.println("Message sent to player: " + player.getName());
+                        sendLog(plugin ,"info","Message sent to player: " + player.getName());
                     } catch (Exception e) {
                         // Обработка ошибок в случае неправильного формата JSON
-                        System.out.println("Invalid JSON format: " + e.getMessage());
+                        sendLog(plugin ,"info","Invalid JSON format: " + e.getMessage());
                     }
                 }
 
             }
         } else {
-            System.out.println((player == null ? "Player" : "Message") + " is null");
+            sendLog(plugin ,"info",(player == null ? "Player" : "Message") + " is null");
         }
     }
 
