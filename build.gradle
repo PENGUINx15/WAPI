@@ -3,7 +3,7 @@ plugins {
 }
 
 group = 'me.PENGUINx13'
-version = '1.0.0'
+version = '1.0.6'
 
 repositories {
     mavenCentral()
@@ -29,6 +29,7 @@ dependencies {
 
     implementation 'com.mojang:authlib:1.5.25'
     implementation 'commons-codec:commons-codec:1.15'
+    implementation 'com.google.code.gson:gson:2.8.9'
 }
 
 def targetJavaVersion = 8

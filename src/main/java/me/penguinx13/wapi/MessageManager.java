@@ -1,7 +1,11 @@
 package me.penguinx13.wapi;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.ClickEvent;
+import net.md_5.bungee.api.chat.HoverEvent;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -27,7 +31,23 @@ public class MessageManager implements Listener {
                     player.sendTitle("", line.replace("&", "§").replace("{subtitle}", ""), 10, 70, 20);
                 } else if (line.contains("{message}")) {
                     player.sendMessage(line.replace("&", "§").replace("{message}", ""));
+                } else if (line.contains("{json}")) {
+                    message = line.replace("{json}", "").trim();
+
+                    JsonObject jsonObject = JsonParser.parseString(message).getAsJsonObject();
+
+                    String messageText = jsonObject.get("text").getAsString().replace("&", "§"); // Заменяем цветовые коды
+                    String clickCommand = jsonObject.getAsJsonObject("clickEvent").get("value").getAsString();
+                    JsonObject hoverObject = jsonObject.getAsJsonObject("hoverEvent").getAsJsonArray("value").get(0).getAsJsonObject();
+                    String hoverText = hoverObject.get("text").getAsString().replace("&", "§");
+
+                    TextComponent jsonMessage = new TextComponent(messageText);
+                    jsonMessage.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, clickCommand));
+                    jsonMessage.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TextComponent[] { new TextComponent(hoverText) }));
+
+                    player.spigot().sendMessage(jsonMessage);
                 }
+
             }
         } else {
             System.out.println((player == null ? "Player" : "Message") + " is null");
