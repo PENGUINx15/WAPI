@@ -34,18 +34,30 @@ public class MessageManager implements Listener {
                 } else if (line.contains("{json}")) {
                     message = line.replace("{json}", "").trim();
 
-                    JsonObject jsonObject = JsonParser.parseString(message).getAsJsonObject();
+                    System.out.println("Parsed JSON: " + message);
 
-                    String messageText = jsonObject.get("text").getAsString().replace("&", "§"); // Заменяем цветовые коды
-                    String clickCommand = jsonObject.getAsJsonObject("clickEvent").get("value").getAsString();
-                    JsonObject hoverObject = jsonObject.getAsJsonObject("hoverEvent").getAsJsonArray("value").get(0).getAsJsonObject();
-                    String hoverText = hoverObject.get("text").getAsString().replace("&", "§");
+                    try {
+                        JsonObject jsonObject = JsonParser.parseString(message).getAsJsonObject();
 
-                    TextComponent jsonMessage = new TextComponent(messageText);
-                    jsonMessage.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, clickCommand));
-                    jsonMessage.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TextComponent[] { new TextComponent(hoverText) }));
+                        String messageText = jsonObject.get("text").getAsString().replace("&", "§"); // Заменяем цветовые коды
+                        String clickCommand = jsonObject.getAsJsonObject("clickEvent").get("value").getAsString();
+                        JsonObject hoverObject = jsonObject.getAsJsonObject("hoverEvent").getAsJsonArray("value").get(0).getAsJsonObject();
+                        String hoverText = hoverObject.get("text").getAsString().replace("&", "§");
 
-                    player.spigot().sendMessage(jsonMessage);
+                        // Создаем текстовое сообщение с кликабельностью и hover-событием
+                        TextComponent jsonMessage = new TextComponent(messageText);
+                        jsonMessage.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, clickCommand));
+                        jsonMessage.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TextComponent[] { new TextComponent(hoverText) }));
+
+                        // Отправляем сообщение игроку
+                        player.spigot().sendMessage(jsonMessage);
+
+                        // Отладочное сообщение, чтобы убедиться, что сообщение отправлено
+                        System.out.println("Message sent to player: " + player.getName());
+                    } catch (Exception e) {
+                        // Обработка ошибок в случае неправильного формата JSON
+                        System.out.println("Invalid JSON format: " + e.getMessage());
+                    }
                 }
 
             }
