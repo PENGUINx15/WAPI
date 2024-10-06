@@ -1,12 +1,10 @@
 package me.penguinx13.wapi;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.ClickEvent;
-import net.md_5.bungee.api.chat.HoverEvent;
+import net.md_5.bungee.api.chat.BaseComponent;
 import net.md_5.bungee.api.chat.TextComponent;
+import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
@@ -34,31 +32,14 @@ public class MessageManager implements Listener {
                 } else if (line.contains("{message}")) {
                     player.sendMessage(line.replace("&", "§").replace("{message}", ""));
                 } else if (line.contains("{json}")) {
-                    message = line.replace("{json}", "").trim();
-
-                    sendLog(plugin ,"info","Parsed JSON: " + message);
-
                     try {
-                        JsonObject jsonObject = JsonParser.parseString(message).getAsJsonObject();
+                        BaseComponent[] components = ComponentSerializer.parse(line.replace("{json}", "").replace("&", "§"));
+                        player.spigot().sendMessage(components);
 
-                        String messageText = jsonObject.get("text").getAsString().replace("&", "§"); // Заменяем цветовые коды
-                        String clickCommand = jsonObject.getAsJsonObject("clickEvent").get("value").getAsString();
-                        JsonObject hoverObject = jsonObject.getAsJsonObject("hoverEvent").getAsJsonArray("value").get(0).getAsJsonObject();
-                        String hoverText = hoverObject.get("text").getAsString().replace("&", "§");
-
-                        // Создаем текстовое сообщение с кликабельностью и hover-событием
-                        TextComponent jsonMessage = new TextComponent(messageText);
-                        jsonMessage.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, clickCommand));
-                        jsonMessage.setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TextComponent[] { new TextComponent(hoverText) }));
-
-                        // Отправляем сообщение игроку
-                        player.spigot().sendMessage(jsonMessage);
-
-                        // Отладочное сообщение, чтобы убедиться, что сообщение отправлено
-                        sendLog(plugin ,"info","Message sent to player: " + player.getName());
+                        sendLog(plugin, "info", "Sending json successful");
                     } catch (Exception e) {
-                        // Обработка ошибок в случае неправильного формата JSON
-                        sendLog(plugin ,"info","Invalid JSON format: " + e.getMessage());
+                        e.printStackTrace();
+                        sendLog(plugin, "info", "Invalid JSON format: " + e.getMessage());
                     }
                 }
 
