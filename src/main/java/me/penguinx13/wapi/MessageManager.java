@@ -67,7 +67,7 @@ public class MessageManager implements Listener {
         }
     }
     private static List<String> splitText(String text) {
-        String regex = "\\{(title|action|message|subtitle)}(.*?)(?=\\{(?:title|action|message|subtitle)}|$)";
+        String regex = "\\{(title|action|message|subtitle|json)}(.*?)(?=\\{(?:title|action|message|subtitle|json)}|$)";
         Pattern pattern = Pattern.compile(regex);
         Matcher matcher = pattern.matcher(text);
         List<String> nonEmptyParts = new ArrayList<>();
