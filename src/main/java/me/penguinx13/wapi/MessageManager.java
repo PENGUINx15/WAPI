@@ -16,8 +16,6 @@ import java.util.regex.Pattern;
 
 public class MessageManager implements Listener {
 
-    private static  Plugin plugin;
-
     public static void sendMessage(Player player, String message) {
         if (player != null && message != null) {
             message = PlaceholderAPI.setPlaceholders(player, message);
@@ -32,20 +30,11 @@ public class MessageManager implements Listener {
                 } else if (line.contains("{message}")) {
                     player.sendMessage(line.replace("&", "§").replace("{message}", ""));
                 } else if (line.contains("{json}")) {
-                    try {
-                        BaseComponent[] components = ComponentSerializer.parse(line.replace("{json}", "").replace("&", "§"));
-                        player.spigot().sendMessage(components);
-
-                        sendLog(plugin, "info", "Sending json successful");
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        sendLog(plugin, "info", "Invalid JSON format: " + e.getMessage());
-                    }
+                    player.spigot().sendMessage(ComponentSerializer.parse(line.replace("{json}", "").replace("&", "§")));
                 }
-
             }
         } else {
-            sendLog(plugin ,"info",(player == null ? "Player" : "Message") + " is null");
+            System.out.println((player == null ? "Player" : "Message") + " is null");
         }
     }
 
