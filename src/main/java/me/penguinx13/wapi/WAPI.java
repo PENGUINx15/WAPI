@@ -6,11 +6,11 @@ public final class WAPI extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        getLogger().info("WAIP Enabled successful");
+        getLogger().info("WAPI enabled successful");
     }
 
     @Override
     public void onDisable() {
-        // Plugin shutdown logic
+        getLogger().info("WAPI disabled successful");
     }
 }
