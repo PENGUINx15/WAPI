@@ -39,6 +39,6 @@ public class CustomSkulls {
         GameProfile profile = new GameProfile(UUID.randomUUID(), null);
         profile.getProperties().put("textures", new Property("textures", url));
 
-        return Bukkit.getOfflinePlayer(profile.getName());
+        return Bukkit.getOfflinePlayer(profile.getId());
     }
 }
