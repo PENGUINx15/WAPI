@@ -3,7 +3,9 @@ package me.penguinx13.wapi;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
@@ -32,5 +34,11 @@ public class CustomSkulls {
         }
         head.setItemMeta(headMeta);
         return head;
+    }
+    public static OfflinePlayer getSkullOwner(String url){
+        GameProfile profile = new GameProfile(UUID.randomUUID(), null);
+        profile.getProperties().put("textures", new Property("textures", url));
+
+        return Bukkit.getOfflinePlayer(profile.getName());
     }
 }
