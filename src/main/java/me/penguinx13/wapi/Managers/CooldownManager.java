@@ -1,4 +1,4 @@
-package me.penguinx13.wapi;
+package me.penguinx13.wapi.Managers;
 
 import java.util.HashMap;
 import java.util.UUID;
