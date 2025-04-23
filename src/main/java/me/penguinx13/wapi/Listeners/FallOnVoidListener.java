@@ -14,6 +14,9 @@ public class FallOnVoidListener implements Listener {
             Entity entity = event.getEntity();
             FallOnVoidEvent voidEvent = new FallOnVoidEvent(entity);
             Bukkit.getPluginManager().callEvent(voidEvent);
+            if (voidEvent.isCancelled()) {
+                event.setCancelled(true);
+            }
         }
     }
 }
