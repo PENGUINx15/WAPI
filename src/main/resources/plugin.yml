@@ -1,3 +1,4 @@
 name: WAPI
 version: '${version}'
 main: me.penguinx13.wapi.WAPI
+api-version: '1.19'

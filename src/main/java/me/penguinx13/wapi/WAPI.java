@@ -1,6 +1,5 @@
 package me.penguinx13.wapi;
 
-import me.penguinx13.wapi.Events.FallOnVoidEvent;
 import me.penguinx13.wapi.Listeners.FallOnVoidListener;
 import org.bukkit.plugin.java.JavaPlugin;
 
