@@ -4,6 +4,7 @@ import org.bukkit.entity.Entity;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Cancellable;
+import org.jetbrains.annotations.NotNull;
 
 public class FallOnVoidEvent extends Event implements Cancellable {
     private static final HandlerList HANDLERS = new HandlerList();
@@ -30,7 +31,7 @@ public class FallOnVoidEvent extends Event implements Cancellable {
     }
 
     @Override
-    public HandlerList getHandlers() {
+    public @NotNull HandlerList getHandlers() {
         return HANDLERS;
     }
 
