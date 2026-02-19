@@ -38,7 +38,7 @@ public class CooldownManager {
     public boolean hasCooldown(UUID uuid, String name, Integer time) {
     	String key = uuid.toString() + ":" + name;
         if(cooldowns.containsKey(key)) {
-            return getCooldown(key) > time;
+            return getCooldown(key) < time;
         }
         return true;
     }
