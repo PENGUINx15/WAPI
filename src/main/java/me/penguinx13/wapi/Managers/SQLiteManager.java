@@ -10,6 +10,18 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+/**
+ * Простая обёртка для работы с SQLite в рамках Bukkit/Paper плагина.
+ *
+ * <p>Использование:</p>
+ * <ol>
+ *   <li>Создать экземпляр {@code new SQLiteManager(plugin, "file.db")}.</li>
+ *   <li>Вызвать {@link #connect()} в {@code onEnable()}.</li>
+ *   <li>Выполнять SQL через {@link #executeUpdate(String)} /
+ *       {@link #executeUpdate(String, Object...)} / {@link #prepareStatement(String, Object...)}.</li>
+ *   <li>Вызвать {@link #disconnect()} в {@code onDisable()}.</li>
+ * </ol>
+ */
 public class SQLiteManager {
 
     private final Plugin plugin;
