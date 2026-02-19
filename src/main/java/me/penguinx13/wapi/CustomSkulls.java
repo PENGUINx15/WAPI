@@ -5,9 +5,9 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.authlib.properties.Property;
 import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.Bukkit;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
-import org.bukkit.block.Skull;
 
 import java.lang.reflect.Field;
 import java.util.UUID;
@@ -15,7 +15,7 @@ import java.util.UUID;
 
 public class CustomSkulls {
     public static ItemStack getSkull(String url) {
-        ItemStack head = new ItemStack(Material.PLAYER_HEAD, 1, (short)3);
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         if(url.isEmpty())return head;
 
         SkullMeta headMeta = (SkullMeta) head.getItemMeta();
@@ -36,7 +36,20 @@ public class CustomSkulls {
         return head;
     }
     public static OfflinePlayer getSkullOwner(String url){
-        Skull skull = (Skull) getSkull(url);
-        return skull.getOwningPlayer();
+        SkullMeta skullMeta = (SkullMeta) getSkull(url).getItemMeta();
+        if (skullMeta == null) {
+            return null;
+        }
+
+        OfflinePlayer owner = skullMeta.getOwningPlayer();
+        if (owner != null) {
+            return owner;
+        }
+
+        if (skullMeta.getOwner() != null) {
+            return Bukkit.getOfflinePlayer(skullMeta.getOwner());
+        }
+
+        return null;
     }
 }
