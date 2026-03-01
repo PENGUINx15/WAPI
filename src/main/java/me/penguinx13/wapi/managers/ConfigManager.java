@@ -1,4 +1,4 @@
-package me.penguinx13.wapi.Managers;
+package me.penguinx13.wapi.managers;
 
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;

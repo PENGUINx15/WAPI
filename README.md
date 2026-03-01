@@ -20,7 +20,7 @@
 ```java
 package me.penguinx13.wapi;
 
-import me.penguinx13.wapi.Managers.SQLiteManager;
+import me.penguinx13.wapi.managers.SQLiteManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.sql.PreparedStatement;
@@ -42,7 +42,7 @@ public final class WAPI extends JavaPlugin {
                 "CREATE TABLE IF NOT EXISTS players (" +
                         "uuid TEXT PRIMARY KEY," +
                         "coins INTEGER NOT NULL DEFAULT 0" +
-                ")"
+                        ")"
         );
 
         // Добавляем/обновляем игрока

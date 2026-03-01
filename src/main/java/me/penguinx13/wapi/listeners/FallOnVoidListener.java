@@ -1,6 +1,6 @@
-package me.penguinx13.wapi.Listeners;
+package me.penguinx13.wapi.listeners;
 
-import me.penguinx13.wapi.Events.FallOnVoidEvent;
+import me.penguinx13.wapi.events.FallOnVoidEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Entity;
 import org.bukkit.event.EventHandler;

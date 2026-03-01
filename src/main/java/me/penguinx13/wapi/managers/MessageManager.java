@@ -1,4 +1,4 @@
-package me.penguinx13.wapi.Managers;
+package me.penguinx13.wapi.managers;
 
 import me.clip.placeholderapi.PlaceholderAPI;
 import net.kyori.adventure.text.Component;
@@ -163,7 +163,7 @@ public class MessageManager implements Listener {
             nonEmptyParts.add(matcher.group(0).trim());
         }
 
-        if (nonEmptyParts.isEmpty() && text != null && !text.isBlank()) {
+        if (nonEmptyParts.isEmpty() && !text.isBlank()) {
             nonEmptyParts.add("{message}" + text.trim());
         }
 

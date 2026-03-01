@@ -1,4 +1,4 @@
-package me.penguinx13.wapi.Events;
+package me.penguinx13.wapi.events;
 
 import org.bukkit.entity.Entity;
 import org.bukkit.event.Event;

@@ -1,6 +1,6 @@
 package me.penguinx13.wapi;
 
-import me.penguinx13.wapi.Listeners.FallOnVoidListener;
+import me.penguinx13.wapi.listeners.FallOnVoidListener;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class WAPI extends JavaPlugin {
