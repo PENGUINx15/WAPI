@@ -2,13 +2,13 @@ package me.penguinx13.wapi.commandframework.model;
 
 import java.util.Collection;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class CommandTreeNode {
     private final String literal;
-    private final Map<String, CommandTreeNode> children = new LinkedHashMap<>();
-    private CommandMethodMeta command;
+    private final Map<String, CommandTreeNode> children = new ConcurrentHashMap<>();
+    private volatile CommandMethodMeta command;
 
     public CommandTreeNode(String literal) {
         this.literal = literal;

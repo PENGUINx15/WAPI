@@ -8,11 +8,21 @@ public final class UsageGenerator {
     }
 
     public static String usageOf(CommandMethodMeta meta) {
+        return usageOf(meta.getRoot(), meta);
+    }
+
+    public static String usageOf(String root, CommandMethodMeta meta) {
         StringBuilder builder = new StringBuilder();
-        builder.append('/').append(meta.getRoot());
+        builder.append('/').append(root);
         for (String token : meta.getPath()) {
             builder.append(' ').append(token);
         }
+        appendArguments(builder, meta);
+        return builder.toString();
+    }
+
+
+    private static void appendArguments(StringBuilder builder, CommandMethodMeta meta) {
         for (ArgumentMeta argument : meta.getArguments()) {
             if (argument.isOptional()) {
                 builder.append(" [").append(argument.getName()).append(']');
@@ -20,6 +30,5 @@ public final class UsageGenerator {
                 builder.append(" <").append(argument.getName()).append('>');
             }
         }
-        return builder.toString();
     }
 }
