@@ -1,8 +1,9 @@
 package me.penguinx13.wapi.Managers;
 
 import me.clip.placeholderapi.PlaceholderAPI;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.md_5.bungee.chat.ComponentSerializer;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -16,21 +17,34 @@ import java.util.regex.Pattern;
 
 public class MessageManager implements Listener {
 
+    private static final MiniMessage MINI_MESSAGE = MiniMessage.miniMessage();
+    private static final LegacyComponentSerializer LEGACY_SERIALIZER =
+            LegacyComponentSerializer.builder().character('&').hexColors().build();
+
     public static void sendMessage(Player player, String message) {
         if (player != null && message != null) {
             message = PlaceholderAPI.setPlaceholders(player, message);
             List<String> result = splitText(message);
             for (String line : result) {
                 if (line.contains("{action}")) {
-                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(line.replace("&", "§").replace("{action}", "")));
+                    String parsedLine = line.replace("{action}", "");
+                    Component component = parseWithFallback(parsedLine);
+                    player.sendActionBar(component);
                 } else if (line.contains("{title}")) {
-                    player.sendTitle(line.replace("&", "§").replace("{title}", ""), "", 10, 70, 20);
+                    String parsedLine = line.replace("{title}", "");
+                    Component component = parseWithFallback(parsedLine);
+                    player.sendTitle(LEGACY_SERIALIZER.serialize(component), "", 10, 70, 20);
                 } else if (line.contains("{subtitle}")) {
-                    player.sendTitle("", line.replace("&", "§").replace("{subtitle}", ""), 10, 70, 20);
+                    String parsedLine = line.replace("{subtitle}", "");
+                    Component component = parseWithFallback(parsedLine);
+                    player.sendTitle("", LEGACY_SERIALIZER.serialize(component), 10, 70, 20);
                 } else if (line.contains("{message}")) {
-                    player.sendMessage(line.replace("&", "§").replace("{message}", ""));
+                    String parsedLine = line.replace("{message}", "");
+                    player.sendMessage(parseWithFallback(parsedLine));
                 } else if (line.contains("{json}")) {
                     player.spigot().sendMessage(ComponentSerializer.parse(line.replace("{json}", "").replace("&", "§")));
+                } else {
+                    player.sendMessage(parseWithFallback(line));
                 }
             }
         } else {
@@ -39,12 +53,40 @@ public class MessageManager implements Listener {
     }
 
     public static void sendMessage(Player player, String message, Map<String, ?> values) {
-        sendMessage(player, replaceValues(message, values));
+        sendMessage(player, applyTemplate(message, values));
     }
 
 
     public static void sendMessage(Player player, String message, Object... values) {
-        sendMessage(player, replaceValues(message, values));
+        sendMessage(player, applyTemplate(message, values));
+    }
+
+    public static String applyTemplate(String message, Map<String, ?> values) {
+        return replaceValues(message, values);
+    }
+
+    public static String applyTemplate(String message, Object... values) {
+        return replaceValues(message, values);
+    }
+
+    public static Component parseWithFallback(String message) {
+        if (message == null || message.isEmpty()) {
+            return Component.empty();
+        }
+
+        if (looksLikeMiniMessage(message)) {
+            try {
+                return MINI_MESSAGE.deserialize(message);
+            } catch (Exception ignored) {
+                // fallback to legacy parser
+            }
+        }
+
+        return LEGACY_SERIALIZER.deserialize(message);
+    }
+
+    private static boolean looksLikeMiniMessage(String message) {
+        return message.indexOf('<') >= 0 && message.indexOf('>') > message.indexOf('<');
     }
 
     public static String replaceValues(String message, Object... values) {
@@ -119,6 +161,10 @@ public class MessageManager implements Listener {
         List<String> nonEmptyParts = new ArrayList<>();
         while (matcher.find()) {
             nonEmptyParts.add(matcher.group(0).trim());
+        }
+
+        if (nonEmptyParts.isEmpty() && text != null && !text.isBlank()) {
+            nonEmptyParts.add("{message}" + text.trim());
         }
 
         return nonEmptyParts;
