@@ -109,3 +109,47 @@ MessageManager.sendMessage(
 // Legacy fallback
 MessageManager.sendMessage(player, "{message}&aЗелёное сообщение через legacy");
 ```
+
+## Annotation Command Framework (Paper 1.19+)
+
+A production-ready mini framework was added under `me.penguinx13.wapi.commandframework`.
+
+### Features
+- `@RootCommand` + method-level `@SubCommand` declarations.
+- Nested subcommands via space-separated literals (`"debug uuid"`, `"admin user ban"`, etc.).
+- Automatic argument parsing and conversion for:
+  - `String`, `int`, `double`, `boolean`, `Player`, `UUID`, and `Enum`.
+- Optional args with `@Arg(optional = true, defaultValue = "...")`.
+- Validation with `@Range(min=..., max=...)`.
+- Permission and player-only checks.
+- Centralized exception-based error handling.
+- Automatic usage generation.
+- Tab completion for literals and typed arguments.
+
+### Declaration example
+
+```java
+@RootCommand("main")
+public class MainCommand {
+
+    @SubCommand("reload")
+    public void reload(CommandSender sender) { }
+
+    @SubCommand("give")
+    public void give(
+        Player sender,
+        @Arg("target") Player target,
+        @Arg("amount") int amount
+    ) { }
+}
+```
+
+### Registration in `onEnable()`
+
+```java
+@Override
+public void onEnable() {
+    CommandRegistry registry = new CommandRegistry(this);
+    registry.registerCommand(new MainCommand(this));
+}
+```

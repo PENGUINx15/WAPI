@@ -3,3 +3,14 @@ version: '${version}'
 main: me.penguinx13.wapi.WAPI
 api-version: '1.19'
 softdepend: [PlaceholderAPI]
+commands:
+  main:
+    description: Root command for annotation command framework examples.
+    usage: /main <subcommand>
+permissions:
+  wapi.main:
+    default: op
+  wapi.main.reload:
+    default: op
+  wapi.main.give:
+    default: op
