@@ -10,6 +10,7 @@ import org.bukkit.plugin.Plugin;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -35,6 +36,63 @@ public class MessageManager implements Listener {
         } else {
             System.out.println((player == null ? "Player" : "Message") + " is null");
         }
+    }
+
+    public static void sendMessage(Player player, String message, Map<String, ?> values) {
+        sendMessage(player, replaceValues(message, values));
+    }
+
+
+    public static void sendMessage(Player player, String message, Object... values) {
+        sendMessage(player, replaceValues(message, values));
+    }
+
+    public static String replaceValues(String message, Object... values) {
+        if (message == null || values == null || values.length == 0) {
+            return message;
+        }
+
+        String result = message;
+        for (int i = 0; i + 1 < values.length; i += 2) {
+            Object key = values[i];
+            if (key == null) {
+                continue;
+            }
+
+            String placeholder = "{" + key + "}";
+            Object value = values[i + 1];
+            String replacement = value == null ? "" : value.toString();
+            result = result.replace(placeholder, replacement);
+        }
+
+        return result;
+    }
+
+    public static String replaceValues(String message, Map<String, ?> values) {
+        if (message == null || values == null || values.isEmpty()) {
+            return message;
+        }
+
+        String result = message;
+        for (Map.Entry<String, ?> entry : values.entrySet()) {
+            if (entry.getKey() == null) {
+                continue;
+            }
+
+            String placeholder = "{" + entry.getKey() + "}";
+            String replacement = entry.getValue() == null ? "" : entry.getValue().toString();
+            result = result.replace(placeholder, replacement);
+        }
+
+        return result;
+    }
+
+    public static String replaceValue(String message, String key, Object value) {
+        if (message == null || key == null) {
+            return message;
+        }
+
+        return message.replace("{" + key + "}", value == null ? "" : value.toString());
     }
 
     public static void sendLog(Plugin plugin, String type, String message) {
