@@ -81,3 +81,31 @@ public final class WAPI extends JavaPlugin {
 - Для чтения данных лучше использовать `prepareStatement(...)` + `try-with-resources`, чтобы корректно закрывать `PreparedStatement` и `ResultSet`.
 - Вызывайте `disconnect()` в `onDisable()`.
 - Один экземпляр `SQLiteManager` на плагин обычно достаточно.
+
+## MessageManager (расширенный API)
+
+`MessageManager` поддерживает современный Adventure-стек с fallback на legacy-цвета.
+
+### Возможности
+- Поддержка MiniMessage (`<green>Текст</green>`, `<gradient:red:blue>...</gradient>`).
+- Авто-fallback на legacy-формат (`&a`, `&6`, `&#RRGGBB`), если строка не похожа на MiniMessage или MiniMessage-парсинг не удался.
+- Шаблоны с заменой переменных через:
+  - `applyTemplate(String, Map<String, ?>)`
+  - `applyTemplate(String, Object... keyValuePairs)`
+- Сохранена работа каналов `{message}`, `{action}`, `{title}`, `{subtitle}`, `{json}`.
+
+### Пример
+
+```java
+String template = "{message}<green>Привет, {player}</green>! Баланс: <gold>{coins}</gold>";
+
+MessageManager.sendMessage(
+        player,
+        MessageManager.applyTemplate(template,
+                "player", player.getName(),
+                "coins", 1250)
+);
+
+// Legacy fallback
+MessageManager.sendMessage(player, "{message}&aЗелёное сообщение через legacy");
+```
