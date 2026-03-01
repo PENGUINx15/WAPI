@@ -79,6 +79,7 @@ public class CommandMetadataCache {
                 root.value().toLowerCase(),
                 path,
                 permission,
+                sub.description(),
                 playerOnly,
                 arguments,
                 methodParameters

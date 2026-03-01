@@ -3,6 +3,7 @@ package me.penguinx13.wapi.commandframework.core;
 import me.penguinx13.wapi.commandframework.model.CommandMethodMeta;
 import me.penguinx13.wapi.commandframework.model.CommandTreeNode;
 
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -20,5 +21,9 @@ public class CommandTree {
 
     public CommandTreeNode getRoot(String rootLiteral) {
         return roots.get(rootLiteral.toLowerCase());
+    }
+
+    public Collection<CommandTreeNode> getRoots() {
+        return roots.values();
     }
 }

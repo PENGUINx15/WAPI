@@ -9,7 +9,9 @@ import me.penguinx13.wapi.commandframework.resolver.ResolverRegistry;
 import org.bukkit.command.CommandSender;
 import org.bukkit.plugin.java.JavaPlugin;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 public class CommandRegistry {
     private final JavaPlugin plugin;
@@ -17,6 +19,7 @@ public class CommandRegistry {
     private final CommandTree commandTree = new CommandTree();
     private final ResolverRegistry resolverRegistry = new ResolverRegistry();
     private final CommandDispatcher dispatcher;
+    private final Set<String> boundRoots = new LinkedHashSet<>();
     private volatile CommandErrorHandler errorHandler;
 
     public CommandRegistry(JavaPlugin plugin) {
@@ -26,14 +29,25 @@ public class CommandRegistry {
         this.errorHandler = new DefaultCommandErrorHandler();
     }
 
-    public void registerCommand(Object commandObject) {
+    public void registerCommands(Object... commandObjects) {
+        for (Object commandObject : commandObjects) {
+            registerCommand(commandObject);
+        }
+    }
+
+    public synchronized void registerCommand(Object commandObject) {
         List<CommandMethodMeta> commandMethods = metadataCache.scan(commandObject);
         for (CommandMethodMeta meta : commandMethods) {
             commandTree.add(meta);
         }
+
         String root = commandMethods.stream().findFirst()
                 .map(CommandMethodMeta::getRoot)
                 .orElseThrow(() -> new CommandException("No @SubCommand methods were found."));
+
+        if (boundRoots.contains(root)) {
+            return;
+        }
 
         CommandExecutorAdapter adapter = new CommandExecutorAdapter(this, root);
         if (plugin.getCommand(root) == null) {
@@ -41,6 +55,7 @@ public class CommandRegistry {
         }
         plugin.getCommand(root).setExecutor(adapter);
         plugin.getCommand(root).setTabCompleter(adapter);
+        boundRoots.add(root);
     }
 
     public void setErrorHandler(CommandErrorHandler errorHandler) {
@@ -55,7 +70,10 @@ public class CommandRegistry {
         try {
             dispatcher.dispatch(sender, root, args);
         } catch (CommandException e) {
-            errorHandler.handle(sender, e);
+            String message = e.getMessage();
+            if (message != null && !message.isBlank()) {
+                errorHandler.handle(sender, e);
+            }
         }
     }
 

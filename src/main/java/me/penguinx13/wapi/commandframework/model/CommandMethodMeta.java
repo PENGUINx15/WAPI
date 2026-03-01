@@ -10,6 +10,7 @@ public class CommandMethodMeta {
     private final String root;
     private final List<String> path;
     private final String permission;
+    private final String description;
     private final boolean playerOnly;
     private final List<ArgumentMeta> arguments;
     private final List<Parameter> methodParameters;
@@ -20,6 +21,7 @@ public class CommandMethodMeta {
             String root,
             List<String> path,
             String permission,
+            String description,
             boolean playerOnly,
             List<ArgumentMeta> arguments,
             List<Parameter> methodParameters
@@ -29,6 +31,7 @@ public class CommandMethodMeta {
         this.root = root;
         this.path = path;
         this.permission = permission;
+        this.description = description;
         this.playerOnly = playerOnly;
         this.arguments = arguments;
         this.methodParameters = methodParameters;
@@ -52,6 +55,10 @@ public class CommandMethodMeta {
 
     public String getPermission() {
         return permission;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public boolean isPlayerOnly() {

@@ -11,6 +11,7 @@ import me.penguinx13.wapi.commandframework.model.CommandMethodMeta;
 import me.penguinx13.wapi.commandframework.model.CommandTreeNode;
 import me.penguinx13.wapi.commandframework.resolver.ArgumentResolver;
 import me.penguinx13.wapi.commandframework.resolver.ResolverRegistry;
+import org.bukkit.ChatColor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 
@@ -18,9 +19,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
 
 public class CommandDispatcher {
+    private static final String HELP_LITERAL = "help";
+
     private final CommandTree commandTree;
     private final ResolverRegistry resolverRegistry;
 
@@ -30,18 +37,21 @@ public class CommandDispatcher {
     }
 
     public void dispatch(CommandSender sender, String rootLiteral, String[] args) {
-        CommandMethodMeta meta = resolve(rootLiteral, args);
-        enforceAccess(sender, meta);
+        CommandTreeNode rootNode = requireRoot(rootLiteral);
 
-        int argumentStart = meta.getPath().size();
-        List<String> rawArguments = args.length > argumentStart
-                ? List.of(args).subList(argumentStart, args.length)
-                : Collections.emptyList();
+        HelpTarget helpTarget = resolveHelpTarget(rootNode, args);
+        if (helpTarget != null) {
+            sendHelp(sender, rootLiteral, helpTarget.node, helpTarget.depth, helpTarget.pathPrefix);
+            return;
+        }
 
-        Object[] invocationArguments = buildInvocationArguments(sender, meta, rawArguments);
+        Resolution resolution = resolveForExecution(rootLiteral, rootNode, args);
+        enforceAccess(sender, resolution.command);
+
+        Object[] invocationArguments = buildInvocationArguments(sender, resolution.command, resolution.rawArguments);
 
         try {
-            meta.getMethod().invoke(meta.getInstance(), invocationArguments);
+            resolution.command.getMethod().invoke(resolution.command.getInstance(), invocationArguments);
         } catch (IllegalAccessException e) {
             throw new CommandException("Could not access command method.", e);
         } catch (InvocationTargetException e) {
@@ -59,46 +69,67 @@ public class CommandDispatcher {
             return Collections.emptyList();
         }
 
-        TraversalResult result = walkToBestMatch(rootNode, args);
-        if (result.missingLiteral) {
-            return result.suggestions;
+        String currentToken = args.length == 0 ? "" : args[args.length - 1].toLowerCase(Locale.ROOT);
+        CommandTreeNode current = rootNode;
+        int index = 0;
+
+        while (index < Math.max(0, args.length - 1)) {
+            String token = args[index].toLowerCase(Locale.ROOT);
+            if (HELP_LITERAL.equals(token)) {
+                return Collections.emptyList();
+            }
+            CommandTreeNode child = current.getChild(token);
+            if (child == null) {
+                return Collections.emptyList();
+            }
+            current = child;
+            index++;
         }
 
-        CommandMethodMeta meta = result.command;
-        if (meta == null) {
-            return result.suggestions;
+        List<String> literalSuggestions = current.getChildren().stream()
+                .filter(node -> canAccess(sender, node.getCommand()))
+                .map(CommandTreeNode::getLiteral)
+                .filter(literal -> literal.startsWith(currentToken))
+                .sorted()
+                .toList();
+
+        if (!literalSuggestions.isEmpty()) {
+            return literalSuggestions;
         }
 
-        if (!meta.getPermission().isBlank() && !sender.hasPermission(meta.getPermission())) {
+        if (HELP_LITERAL.startsWith(currentToken)) {
+            return List.of(HELP_LITERAL);
+        }
+
+        CommandMethodMeta meta = current.getCommand();
+        if (meta == null || !canAccess(sender, meta)) {
             return Collections.emptyList();
         }
 
-        int argumentIndex = result.argumentIndex;
-        if (argumentIndex < 0 || argumentIndex >= meta.getArguments().size()) {
+        int argumentPosition = args.length - meta.getPath().size() - 1;
+        if (argumentPosition < 0 || argumentPosition >= meta.getArguments().size()) {
             return Collections.emptyList();
         }
 
-        ArgumentMeta argumentMeta = meta.getArguments().get(argumentIndex);
+        ArgumentMeta argumentMeta = meta.getArguments().get(argumentPosition);
         ArgumentResolver<?> resolver = resolverRegistry.find(argumentMeta.getType());
         if (resolver == null) {
             return Collections.emptyList();
         }
 
-        String typed = args.length == 0 ? "" : args[args.length - 1];
-        return resolver.suggest(typed, argumentMeta.getType(), sender);
+        Set<String> suggestions = new LinkedHashSet<>(resolver.suggest(currentToken, argumentMeta.getType(), sender));
+        if (argumentMeta.isOptional() && currentToken.isEmpty()) {
+            suggestions.add("<skip>");
+        }
+        return suggestions.stream().filter(suggestion -> suggestion.startsWith(currentToken)).toList();
     }
 
-    private CommandMethodMeta resolve(String rootLiteral, String[] args) {
-        CommandTreeNode rootNode = commandTree.getRoot(rootLiteral);
-        if (rootNode == null) {
-            throw new CommandException("Unknown root command '/" + rootLiteral + "'.");
-        }
-
+    private Resolution resolveForExecution(String rootLiteral, CommandTreeNode rootNode, String[] args) {
         CommandTreeNode current = rootNode;
         int consumedPath = 0;
 
         while (consumedPath < args.length) {
-            CommandTreeNode child = current.getChild(args[consumedPath].toLowerCase());
+            CommandTreeNode child = current.getChild(args[consumedPath].toLowerCase(Locale.ROOT));
             if (child == null) {
                 break;
             }
@@ -114,10 +145,91 @@ public class CommandDispatcher {
         int providedArgumentCount = args.length - consumedPath;
         long requiredArgumentCount = meta.getArguments().stream().filter(argument -> !argument.isOptional()).count();
         if (providedArgumentCount < requiredArgumentCount || providedArgumentCount > meta.getArguments().size()) {
-            throw new UsageException(UsageGenerator.usageOf(meta));
+            throw new UsageException(UsageGenerator.usageOf(rootLiteral, meta));
         }
 
-        return meta;
+        List<String> rawArguments = providedArgumentCount == 0
+                ? Collections.emptyList()
+                : List.of(args).subList(consumedPath, args.length);
+        return new Resolution(meta, rawArguments);
+    }
+
+    private HelpTarget resolveHelpTarget(CommandTreeNode rootNode, String[] args) {
+        if (args.length == 0) {
+            return new HelpTarget(rootNode, 0, List.of());
+        }
+
+        if (args.length == 1 && HELP_LITERAL.equalsIgnoreCase(args[0])) {
+            return new HelpTarget(rootNode, 0, List.of());
+        }
+
+        CommandTreeNode current = rootNode;
+        List<String> pathPrefix = new ArrayList<>();
+
+        for (String arg : args) {
+            String token = arg.toLowerCase(Locale.ROOT);
+            if (HELP_LITERAL.equals(token)) {
+                return new HelpTarget(current, pathPrefix.size(), List.copyOf(pathPrefix));
+            }
+            CommandTreeNode child = current.getChild(token);
+            if (child == null) {
+                return null;
+            }
+            current = child;
+            pathPrefix.add(token);
+        }
+
+        return null;
+    }
+
+    private CommandTreeNode requireRoot(String rootLiteral) {
+        CommandTreeNode rootNode = commandTree.getRoot(rootLiteral);
+        if (rootNode == null) {
+            throw new CommandException("Unknown root command '/" + rootLiteral + "'.");
+        }
+        return rootNode;
+    }
+
+    private void sendHelp(CommandSender sender, String rootLiteral, CommandTreeNode fromNode, int depthOffset, List<String> pathPrefix) {
+        String header = pathPrefix.isEmpty()
+                ? "/" + rootLiteral
+                : "/" + rootLiteral + " " + String.join(" ", pathPrefix);
+        sender.sendMessage(ChatColor.GOLD + "Command help for " + header + ':');
+
+        List<String> lines = buildHelpLines(sender, rootLiteral, fromNode, depthOffset);
+        if (lines.isEmpty()) {
+            sender.sendMessage(ChatColor.YELLOW + "No available subcommands.");
+            return;
+        }
+        lines.forEach(sender::sendMessage);
+    }
+
+    private List<String> buildHelpLines(CommandSender sender, String rootLiteral, CommandTreeNode node, int depth) {
+        List<String> lines = new ArrayList<>();
+
+        CommandMethodMeta command = node.getCommand();
+        if (command != null && canAccess(sender, command)) {
+            String usage = UsageGenerator.usageOf(rootLiteral, command);
+            StringBuilder line = new StringBuilder();
+            line.append(ChatColor.YELLOW).append("  ".repeat(Math.max(0, depth))).append("- ")
+                    .append(ChatColor.AQUA).append(usage);
+            if (!command.getPermission().isBlank()) {
+                line.append(ChatColor.DARK_GRAY).append(" [perm: ").append(command.getPermission()).append(']');
+            }
+            if (!command.getDescription().isBlank()) {
+                line.append(ChatColor.GRAY).append(" - ").append(command.getDescription());
+            }
+            lines.add(line.toString());
+        }
+
+        List<CommandTreeNode> sortedChildren = node.getChildren().stream()
+                .sorted(Comparator.comparing(CommandTreeNode::getLiteral))
+                .toList();
+
+        for (CommandTreeNode child : sortedChildren) {
+            lines.addAll(buildHelpLines(sender, rootLiteral, child, depth + 1));
+        }
+        return lines;
     }
 
     private void enforceAccess(CommandSender sender, CommandMethodMeta meta) {
@@ -127,6 +239,16 @@ public class CommandDispatcher {
         if (meta.isPlayerOnly() && !(sender instanceof Player)) {
             throw new PlayerOnlyException();
         }
+    }
+
+    private boolean canAccess(CommandSender sender, CommandMethodMeta meta) {
+        if (meta == null) {
+            return true;
+        }
+        if (!meta.getPermission().isBlank() && !sender.hasPermission(meta.getPermission())) {
+            return false;
+        }
+        return !meta.isPlayerOnly() || sender instanceof Player;
     }
 
     private Object[] buildInvocationArguments(CommandSender sender, CommandMethodMeta meta, List<String> rawArguments) {
@@ -211,58 +333,25 @@ public class CommandDispatcher {
         }
     }
 
-    private TraversalResult walkToBestMatch(CommandTreeNode rootNode, String[] args) {
-        CommandTreeNode current = rootNode;
-        int index = 0;
+    private static class Resolution {
+        private final CommandMethodMeta command;
+        private final List<String> rawArguments;
 
-        while (index < args.length) {
-            String token = args[index].toLowerCase();
-            CommandTreeNode child = current.getChild(token);
-            if (child == null) {
-                List<String> literalSuggestions = current.getChildren().stream()
-                        .map(CommandTreeNode::getLiteral)
-                        .filter(literal -> literal.startsWith(token))
-                        .toList();
-
-                if (!literalSuggestions.isEmpty()) {
-                    return TraversalResult.forLiteralSuggestions(literalSuggestions);
-                }
-                break;
-            }
-            current = child;
-            index++;
+        private Resolution(CommandMethodMeta command, List<String> rawArguments) {
+            this.command = command;
+            this.rawArguments = rawArguments;
         }
-
-        CommandMethodMeta meta = current.getCommand();
-        if (meta == null) {
-            List<String> suggestions = current.getChildren().stream().map(CommandTreeNode::getLiteral).toList();
-            return TraversalResult.forLiteralSuggestions(suggestions);
-        }
-
-        int argumentStart = meta.getPath().size();
-        int argumentIndex = Math.max(0, args.length - argumentStart - 1);
-        return TraversalResult.forCommand(meta, argumentIndex);
     }
 
-    private static class TraversalResult {
-        private final CommandMethodMeta command;
-        private final int argumentIndex;
-        private final List<String> suggestions;
-        private final boolean missingLiteral;
+    private static class HelpTarget {
+        private final CommandTreeNode node;
+        private final int depth;
+        private final List<String> pathPrefix;
 
-        private TraversalResult(CommandMethodMeta command, int argumentIndex, List<String> suggestions, boolean missingLiteral) {
-            this.command = command;
-            this.argumentIndex = argumentIndex;
-            this.suggestions = suggestions;
-            this.missingLiteral = missingLiteral;
-        }
-
-        static TraversalResult forCommand(CommandMethodMeta command, int argumentIndex) {
-            return new TraversalResult(command, argumentIndex, Collections.emptyList(), false);
-        }
-
-        static TraversalResult forLiteralSuggestions(List<String> suggestions) {
-            return new TraversalResult(null, -1, suggestions, true);
+        private HelpTarget(CommandTreeNode node, int depth, List<String> pathPrefix) {
+            this.node = node;
+            this.depth = depth;
+            this.pathPrefix = pathPrefix;
         }
     }
 }
