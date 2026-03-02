@@ -1,15 +1,26 @@
 package me.penguinx13.wapi.commands.paper.error;
 
 import me.penguinx13.wapi.commands.core.context.CommandContext;
+import me.penguinx13.wapi.commands.core.context.ExecutionState;
 import me.penguinx13.wapi.commands.core.error.*;
+import me.penguinx13.wapi.commands.core.platform.FrameworkLogger;
+import me.penguinx13.wapi.commands.core.result.CommandResult;
+
+import java.util.Locale;
 
 public final class DefaultErrorPresenter implements ErrorPresenter {
+    private final FrameworkLogger logger;
+
+    public DefaultErrorPresenter(FrameworkLogger logger) {
+        this.logger = logger;
+    }
+
     @Override
-    public void present(CommandContext context, Throwable error) {
-        if (error instanceof UserInputException || error instanceof AuthorizationException) {
-            context.sender().sendMessage("§c" + error.getMessage());
-            return;
+    public CommandResult present(CommandContext context, ExecutionState state, CommandException error, Locale locale) {
+        if (error instanceof UserInputException || error instanceof AuthorizationException || error instanceof ValidationException || error instanceof CooldownException) {
+            return CommandResult.failure(error.getMessage());
         }
-        context.sender().sendMessage("§cAn internal error occurred.");
+        logger.error("Infrastructure failure for correlationId=" + state.correlationId(), error);
+        return CommandResult.failure("An internal error occurred.");
     }
 }

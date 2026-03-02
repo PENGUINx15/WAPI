@@ -11,4 +11,6 @@ public record PaperCommandSenderAdapter(CommandSender delegate) implements Comma
     public UUID uniqueId() { return delegate instanceof Player p ? p.getUniqueId() : UUID.nameUUIDFromBytes(delegate.getName().getBytes()); }
     public boolean isPlayer() { return delegate instanceof Player; }
     public void sendMessage(String message) { delegate.sendMessage(message); }
+    public Object unwrap() { return delegate; }
+    public Class<?> platformSenderType() { return delegate.getClass(); }
 }

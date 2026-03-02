@@ -13,8 +13,9 @@ public final class WAPI extends JavaPlugin {
     public void onEnable() {
         getServer().getPluginManager().registerEvents(new FallOnVoidListener(), this);
 
-        commandFramework = new CommandFrameworkBootstrap();
+        commandFramework = new CommandFrameworkBootstrap(this);
         commandFramework.register(new MainCommand(this));
+        commandFramework.buildAndBind();
 
         getLogger().info("WAPI enabled successful");
     }

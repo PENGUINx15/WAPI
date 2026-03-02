@@ -1,32 +1,49 @@
 package me.penguinx13.wapi.commands.core.pipeline;
 
 import me.penguinx13.wapi.commands.core.context.CommandContext;
-import me.penguinx13.wapi.commands.core.error.ErrorPresenter;
+import me.penguinx13.wapi.commands.core.context.ExecutionState;
+import me.penguinx13.wapi.commands.core.error.CommandException;
+import me.penguinx13.wapi.commands.core.error.InfrastructureException;
+import me.penguinx13.wapi.commands.core.result.CommandResult;
 
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 
 public final class CommandPipeline {
     private final List<CommandStage> stages;
-    private final List<CommandInterceptor> interceptors;
-    private final ErrorPresenter errorPresenter;
 
-    public CommandPipeline(List<CommandStage> stages, List<CommandInterceptor> interceptors, ErrorPresenter errorPresenter) {
-        this.stages = stages;
-        this.interceptors = interceptors;
-        this.errorPresenter = errorPresenter;
+    public CommandPipeline(List<CommandStage> stages) {
+        this.stages = List.copyOf(stages);
     }
 
-    public void execute(CommandContext initial) {
-        CommandContext current = initial;
+    public CompletionStage<CommandResult> execute(CommandContext initial, ExecutionState state) {
+        return executeStage(0, initial, state);
+    }
+
+    private CompletionStage<CommandResult> executeStage(int index, CommandContext context, ExecutionState state) {
+        if (state.cancelled()) {
+            return CompletableFuture.completedFuture(CommandResult.failure("Execution cancelled."));
+        }
+        if (index >= stages.size()) {
+            return CompletableFuture.completedFuture(CommandResult.emptySuccess());
+        }
+
+        CommandStage stage = stages.get(index);
+        long started = System.nanoTime();
         try {
-            for (CommandStage stage : stages) {
-                String stageName = stage.getClass().getSimpleName();
-                for (CommandInterceptor interceptor : interceptors) current = interceptor.beforeStage(stageName, current);
-                current = stage.execute(current);
-                for (CommandInterceptor interceptor : interceptors) current = interceptor.afterStage(stageName, current);
-            }
-        } catch (Throwable throwable) {
-            errorPresenter.present(current, throwable);
+            return stage.execute(context, state)
+                    .thenCompose(result -> {
+                        state.recordStageTiming(stage.getClass().getSimpleName(), System.nanoTime() - started);
+                        if (result instanceof StageResult.Stop stop) {
+                            return CompletableFuture.completedFuture(stop.result());
+                        }
+                        return executeStage(index + 1, ((StageResult.Continue) result).context(), state);
+                    });
+        } catch (CommandException e) {
+            return CompletableFuture.failedStage(e);
+        } catch (Exception e) {
+            return CompletableFuture.failedStage(new InfrastructureException("Pipeline stage failed", e));
         }
     }
 }

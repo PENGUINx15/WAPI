@@ -9,9 +9,23 @@ import java.util.function.Supplier;
 
 public final class PaperScheduler implements Scheduler {
     private final Plugin plugin;
-    public PaperScheduler(Plugin plugin) { this.plugin = plugin; }
+    private final ExecutorService asyncExecutor;
+
+    public PaperScheduler(Plugin plugin) {
+        this.plugin = plugin;
+        this.asyncExecutor = Executors.newFixedThreadPool(Math.max(2, Runtime.getRuntime().availableProcessors() / 2), r -> {
+            Thread t = new Thread(r, "wapi-command-async");
+            t.setDaemon(true);
+            return t;
+        });
+    }
+
     public void runSync(Runnable runnable) { Bukkit.getScheduler().runTask(plugin, runnable); }
-    public CompletableFuture<Void> runAsync(Runnable runnable) { return CompletableFuture.runAsync(runnable); }
-    public <T> CompletableFuture<T> supplyAsync(Supplier<T> supplier) { return CompletableFuture.supplyAsync(supplier); }
+    public CompletableFuture<Void> runAsync(Runnable runnable) { return CompletableFuture.runAsync(runnable, asyncExecutor); }
+    public <T> CompletableFuture<T> supplyAsync(Supplier<T> supplier) { return CompletableFuture.supplyAsync(supplier, asyncExecutor); }
     public boolean isPrimaryThread() { return Bukkit.isPrimaryThread(); }
+
+    public void shutdown() {
+        asyncExecutor.shutdown();
+    }
 }
