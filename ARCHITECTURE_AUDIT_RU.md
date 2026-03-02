@@ -1,234 +1,340 @@
-# Жёсткий архитектурный аудит WAPI (Paper plugin + custom command framework)
+# Глубокий архитектурный аудит WAPI (Paper plugin + custom command framework)
 
-## 1) Слойность и границы
+## 0) Диагноз по факту
 
-### 1.1 «Core» не является core
-`commandframework` напрямую зависит от Bukkit API (`CommandSender`, `Player`, `ChatColor`, `Bukkit`) в диспетчере, метадате и резолверах. Это не фреймворк, а плагин-утилита, вшитая в Paper. Вынести это в отдельный модуль без боли нельзя.
+Это не «готовый command framework», а полу-собранный каркас с красивой модульной раскладкой и критически недореализованным runtime. Публичная архитектурная декларация (`ARCHITECTURE_V2.md`) обещает зрелую pipeline-модель, но реальный код содержит пустые стадии, отсутствие bridge к Bukkit command map и ряд unsafe-практик в конкуренции/IO.
 
-- `CommandDispatcher` типами и логикой привязан к Bukkit (`CommandSender`, `Player`, `ChatColor`) и даже формирует текст помощи сам.  
-- `ArgumentResolver` API требует `CommandSender` прямо в интерфейсе.  
-- `CommandMetadataCache` знает про `Player`/`CommandSender` и кодирует это в правилах сканирования.
+---
 
-Итог: слой «domain/framework core» отсутствует. Есть один слипшийся слой «Bukkit + reflection + parsing + UX». 
+## 1) A) Layer separation: где слои, а где имитация
 
-### 1.2 Риск God-class
-`CommandDispatcher` — жирный комбайн из:
-- маршрутизации,
-- авторизации,
-- help-рендеринга,
-- валидации аргументов,
-- преобразования аргументов,
-- reflection invoke,
-- таб-комплита.
+### 1.1 Разделение модулей есть, но runtime-композиции нет
 
-Это прямое нарушение SRP: изменение любой из подсистем требует править один и тот же класс.
+Да, есть отдельные модули `command-annotations`, `command-core`, `command-paper-adapter`, `WAPI`. Но это структурная раскладка исходников, а не завершённая архитектура выполнения:
 
-### 1.3 Неопределённые границы ответственности
-`CommandRegistry` инициализирует дефолтные резолверы, строит дерево, ловит ошибки, связывается с `plugin.yml`, биндингует executor/tab completer, хранит mutable error handler. Это composition root + runtime registry + adapter binder + error boundary одновременно.
+- `WAPI` создаёт `CommandFrameworkBootstrap`, регистрирует объект команды и на этом всё. Нигде не связывается с `PluginCommand#setExecutor` / `setTabCompleter`. Следовательно, pipeline не получает управление от Bukkit вовсе. `framework` фактически не участвует в обработке `/main` в проде.
+- `CommandFrameworkBootstrap#register` каждый раз только rebuild-ит дерево и выкидывает результат. Дерево не сохраняется в состоянии bootstrap, не используется маршрутизацией.
 
-## 2) Командный фреймворк
+Вердикт: слой интеграции дырявый, фреймворк не доведён до рабочей эксплуатационной цепочки.
 
-### 2.1 Dispatcher design: процедурный монолит
-Пайплайна нет. Нет стадий `Parse -> Validate -> Authorize -> Execute -> HandleError`. Из-за этого:
-- нельзя добавить middleware (логирование, rate-limit, audit trail, metrics) без прямого вторжения в `CommandDispatcher`;
-- нельзя изолированно тестировать стадии;
-- нельзя переиспользовать parse/validate отдельно от invoke.
+### 1.2 Core не полностью изолирован от платформы
 
-### 2.2 CommandTree: простой trie без конфликт-стратегии
-`CommandTree.add` тупо ставит `current.setCommand(meta)` на финальном узле. Если две команды имеют одинаковый путь — последняя молча перезапишет первую. Никакой диагностики конфликта, никакой политики merge/reject.
+Формально core использует абстракции (`CommandSenderAdapter`, `PermissionEvaluator`, `Scheduler`, `Audience`). Это плюс. Но:
 
-### 2.3 Metadata cache: формально cache, фактически trap
-Кэш ключуется `Class<?>`, а `CommandMethodMeta` хранит `instance`. При повторной регистрации второго инстанса того же класса вы получите метадату со старым instance из первого скана (утечка состояния и неправильный target invoke).
+- Core не владеет жизненным циклом этих абстракций и не формирует orchestration-объект типа `CommandRuntime`.
+- `PaperPermissionEvaluator` делает downcast к конкретному `PaperCommandSenderAdapter`, что ломает идею платформенной изоляции: abstraction leaking через adapter boundary.
 
-Это критическая архитектурная ошибка: кэш immutable-метадаты смешан с объектом runtime-инстанса.
+### 1.3 God-class риск смещён в bootstrap/utility-слои
 
-### 2.4 Argument resolution: O(N) linear scan и неявный precedence
-`ResolverRegistry.find` линейно проходит список `CopyOnWriteArrayList`. При росте числа резолверов таб-комплит/диспетч будет постоянно платить O(N). Порядок регистрации решает всё; конфликты `supports()` не детектятся.
+В текущей версии нет одного гигантского диспетчера, но есть противоположная проблема — «анемичная декомпозиция»: множество классов-обёрток по 5–10 строк без связующего поведения. Это не SRP-зрелость, это функциональная пустота. Слишком много «типов ради типов», слишком мало инвариантов.
 
-### 2.5 Tab completion архитектура: неполная модель
-- Нет понятия контекста выполнения (sender, path, parsed args, flags) как отдельного объекта.
-- Нет async completion API.
-- Нет батчинга/кэширования expensive suggestions (напр. lookup игроков/БД).
-- Возврат `Collections.emptyList()` на любом сбое глушит диагностику.
+---
 
-### 2.6 Error propagation: «тихие» провалы
-`tabComplete()` в `CommandRegistry` ловит `Exception` и молча возвращает пустой список. Это скрывает реальные ошибки и превращает дебаг в гадание.
+## 2) B) Командный фреймворк: разбор по подсистемам
 
-### 2.7 Validation model: примитивный и локальный
-Сейчас есть только `@Range` для `Number` и ручная проверка внутри `CommandDispatcher`. Нельзя добавлять валидаторы декларативно, нет цепочки валидаторов, нет групп/контекстов, нет международных сообщений об ошибках.
+## 2.1 Dispatcher design: отсутствует
 
-## 3) Архитектурные smell’ы
+`CommandPipeline` умеет только прогонять список стадий и интерцепторов. Никакой интеграции с источником команд, никакой result-модели, никакого контракта async/sync execution, никакого cancellation/short-circuit API кроме исключений.
 
-### 3.1 Mixed concerns
-- `MessageManager` одновременно: шаблонизатор, PlaceholderAPI интеграция, MiniMessage/legacy parsing, action/title/subtitle/json роутинг, логгер.
-- `SQLiteManager` одновременно: lifecycle connection, SQL executor, statement factory, sync DAO gateway.
+Стадии (`RoutingStage`, `ArgumentParsingStage`, `ValidationStage`, `AuthorizationStage`, `CooldownStage`, `InvocationStage`, `PostProcessingStage`, `ErrorHandlingStage`) полностью пустые — возвращают context как есть. Это не MVP, это заглушки.
 
-### 3.2 Hidden state / mutable global-ish state
-- `CommandRegistry#errorHandler` mutable и `volatile`; поведение фреймворка может меняться в рантайме из другой части плагина.
-- `CooldownManager` держит mutable `HashMap` без синхронизации и без TTL cleanup — потенциально бесконечный рост.
+Практически: у вас нет dispatcher-а как системы.
 
-### 3.3 Overuse/unsafe reflection
-- `CommandMetadataCache` жёстко relies on reflection (`setAccessible(true)`), что ломается на stricter runtime policies.
-- `CustomSkulls` рефлексией лезет в private поле `profile`, что хрупко к версии сервера.
+## 2.2 Command tree implementation
 
-### 3.4 Leaky abstractions
-- Абстракция резолвера протекает Bukkit-типом sender через весь API.
-- `CommandException` одновременно и control-flow (ожидаемые бизнес-ошибки), и internal error wrapper.
+`CommandTree#route`:
 
-### 3.5 Poor boundary definitions
-Нет модуля `api`/`core`/`paper-adapter`. Всё в одном `src/main/java`, ответственность не сегментирована пакетами уровня архитектуры.
+- на каждом токене два последовательных stream-поиска по `children()` (literal, потом argument) — это лишняя аллокация/итерация;
+- выбирает **первый** ARGUMENT-узел при отсутствии literal. При нескольких аргументных ветках на одном уровне — недетерминированность по insertion order, а не по правилу specificity;
+- не возвращает трассировку совпавших аргументов (какой placeholder matched), значит аргументный parsing вынужден дублировать логику/контекст вне роутера.
 
-## 4) Производительность и масштаб
+Сама структура immutable после `build()`, это хорошо. Но runtime-алгоритм маршрутизации — наивный.
 
-### 4.1 Reflection runtime invoke на каждом выполнении
-Каждый command call использует `Method.invoke`. Для 50+ игроков и частых команд это избыточный overhead. Нет перехода на prebound `MethodHandle`/лямбда-bridge.
+## 2.3 Metadata caching strategy
 
-### 4.2 Resolver lookup и suggestions
-- Каждый аргумент — линейный поиск резолвера.
-- `PlayerArgumentResolver.suggest` каждый раз итерирует всех онлайновых игроков.
-- Нет кэширования suggestions даже в пределах одного tab-complete цикла.
+`CommandMetadataCache` кэширует скан класса через `computeIfAbsent` и отдельно bind-ит instance в `BoundCommandMethod`. Это лучше старого анти-паттерна «instance в кэше». Но проблем хватает:
 
-### 4.3 Help rendering рекурсивно без ограничения
-На дереве из 100+ команд help-генерация может создавать большой объём строк каждый вызов `/root`/`help`, без paging.
+- нет инвалидации/версирования для hot-reload сценариев;
+- нет preheat API для массового скана при старте;
+- не учитываются classloader lifecycle нюансы Paper-перезагрузок (потенциальное удержание ссылок до GC при внешних ссылках на cache owner).
 
-### 4.4 Blocking IO риск на main thread
-`SQLiteManager` полностью синхронный. Если его использовать из команд/ивентов (а так и будет), I/O пойдёт в тике сервера. Это лаги/таймауты под нагрузкой.
+## 2.4 Argument resolution system
 
-### 4.5 Resource leak в query API
-`SQLiteManager.executeQuery` возвращает `ResultSet`, созданный через `createStatement()`, но `Statement` не закрывается вызываемой стороной автоматически. Это дыра в управлении ресурсами.
+`ResolverRegistry`:
 
-### 4.6 Неправильная семантика cooldown
-`CooldownManager.hasCooldown` возвращает `true`, когда cooldown записи нет. Это контринтуитивно и архитектурно токсично: API врёт по имени, что генерирует баги в use-site.
+- ключ по точному `Class<?>`, без assignable/primitive-wrapper/enum-strategy fallback;
+- `best(type)` бросает `IllegalArgumentException` — инфраструктурный провал превращается в runtime exception без типизации;
+- `register` synchronized + ConcurrentHashMap вместе — лишняя и неочевидная смесь стратегий;
+- разрешение «лучшего» резолвера зависит только от integer priority, нет capability-check по контексту/аннотациям/source.
 
-## 5) SOLID: нарушения
+Для production framework это слабая модель extensibility.
 
-### S — Single Responsibility
-- `CommandDispatcher` и `MessageManager` нарушают SRP в лоб.
+## 2.5 Tab completion architecture
 
-### O — Open/Closed
-- Добавление нового этапа выполнения команды требует правки `CommandDispatcher`.
-- Добавление новой политики ошибок/валидации/permission flow не расширением, а модификацией.
+`CompletionEngine`:
 
-### L — Liskov
-Явных проблем меньше, но контракт `ArgumentResolver` по факту не стабилен: часть резолверов делает «дешёвый parse», часть делает внешний lookup (player), что ломает ожидания по latency/side-effects.
+- suggestion cache лежит в `CommandContext` как mutable `HashMap`, что ломает иммутабельную семантику record-контекста;
+- кэш-key: `argument.name() + ":" + input` — коллизии между разными командами с одинаковым именем аргумента;
+- отсутствует TTL/size-limit и политика invalidation;
+- нет batching и нет cancelation при быстром наборе таба игроком;
+- нет throttling от expensive resolver-ов.
 
-### I — Interface Segregation
-`ArgumentResolver` склеивает parse + suggest + sender-aware контекст в одном интерфейсе. Для простых scalar resolver’ов sender вообще не нужен.
+## 2.6 Error propagation model
 
-### D — Dependency Inversion
-`CommandRegistry` и core-классы завязаны на конкретный `JavaPlugin`/Bukkit типы, вместо абстракций платформы. DIP фактически отсутствует.
+`CommandPipeline#execute` ловит `Throwable`, а не `Exception`. Это архитектурно токсично:
 
-## 6) Thread-safety
+- глотает `OutOfMemoryError`, `StackOverflowError`, `LinkageError` и прочие JVM-level фаталы;
+- маскирует критические сбои как «обычную ошибку команды» через `ErrorPresenter`.
 
-- `CommandTree` использует `ConcurrentHashMap`, но дерево как структура не имеет transactional consistency при параллельной регистрации/чтении.
-- `CooldownManager` не потокобезопасен (`HashMap`), что станет гонкой при любом async использовании.
-- `SQLiteManager` хранит один shared `Connection` без стратегии конкурентного доступа; JDBC connection обычно не thread-safe для такого режима использования.
+`DefaultErrorPresenter` маппит только `UserInputException`/`AuthorizationException`; всё остальное превращает в «internal error» без логирования stack trace. Дебаг продовых аварий будет мучительным.
 
-## 7) Extensibility
+## 2.7 Validation system
 
-### 7.1 Новые аргументы
-Технически добавить можно, но архитектурно неудобно:
-- нет type-keyed registry,
-- нет приоритетов/override policy,
-- нет scoped resolver’ов (per-command/per-context).
+`ValidationService` жёстко инициализирует встроенные валидаторы в конструкторе, нет модульной композиции/пакетной регистрации/конфликт-политики.
 
-### 7.2 Middleware
-Невозможно встраивать cleanly (нет pipeline/interceptor chain).
+- unchecked cast в `validate`;
+- валидация зависит от runtime annotation list из reflection без compile-time model;
+- нет cross-argument validation;
+- нет validation groups/conditional constraints;
+- нет локализации сообщений.
 
-### 7.3 Async execution
-Нет execution model. Любой async today = руками внутри command method с нарушением thread-правил Bukkit.
+---
 
-### 7.4 Extract как standalone
-С текущими зависимостями на Bukkit в ядре — практически нет. Нужно разрезать проект по модулям.
+## 3) C) Архитектурные smells
 
-## 8) Что развалится в production (100+ команд, 50+ игроков)
+## 3.1 Mixed concerns
 
-1. Дебаг сломается из-за «тихого» проглатывания ошибок таб-комплита. 
-2. Латентность вырастет из-за линейных lookup резолверов и рекурсивного help на больших деревьях. 
-3. Командная база начнёт ловить коллизии путей без детекции (тихое перезаписывание). 
-4. SQLite на main thread даст микрофризы/лагающие тики. 
-5. Появятся race conditions при попытке вынести операции в async (cooldown/sqlite shared state).
+`MessageManager` — статический God-utility:
+
+- placeholder интеграция;
+- парсинг MiniMessage и fallback в legacy;
+- транспорт (chat/actionbar/title/subtitle/json);
+- шаблонизатор;
+- логгер.
+
+Это пять разных ответственностей в одном классе со статикой.
+
+## 3.2 Hidden state
+
+`CommandContext` выглядит как immutable record, но содержит mutable `suggestionCache` map, мутируемый из `CompletionEngine`. Это скрытое мутабельное состояние внутри supposedly immutable value-object.
+
+## 3.3 Mutable global-ish state
+
+- `CooldownManager` держит lifecycle собственного `ScheduledExecutorService`, не привязанного к lifecycle плагина (`shutdown` отсутствует).
+- `SQLiteManager` хранит shared `Connection` и использует его из `CompletableFuture.supplyAsync` без выделенного executor-а и без пула соединений.
+
+## 3.4 Reflection overuse / reflection without contract hardening
+
+`AnnotationCommandScanner`:
+
+- `method.setAccessible(true)` на все subcommand-методы;
+- разбор аргументов только по `@Arg`, параметры без аннотации silently пропускаются;
+- нет валидации сигнатур методов команды на этапе скана (например, sender-first контракт, duplicate names, unsupported types).
+
+Итог: ошибки конфигурации ловятся поздно и случайно.
+
+## 3.5 Leaky abstractions
+
+`PaperPermissionEvaluator` кастит интерфейсный sender к конкретному типу адаптера. Если в core попадёт другой адаптер (тестовый, прокси, future-bridge), получите `ClassCastException`.
+
+## 3.6 Poor boundaries
+
+В `WAPI` нет composition root уровня «порт/адаптер binding». Есть только `new CommandFrameworkBootstrap()` и `register`. Нет deterministic wiring платформенных сервисов (logger/scheduler/permission/audience/resolvers/validators).
+
+---
+
+## 4) D) Performance audit
+
+## 4.1 Reflection usage frequency
+
+Сканер выполняет reflection на регистрацию команд. Это приемлемо, если разово на startup. Но текущий bootstrap rebuild-ит tree после каждой регистрации, а tree нигде не кэшируется для runtime использования — лишняя работа без эффекта.
+
+## 4.2 Resolver instantiation / lookup
+
+Registry хранит цепочки как immutable snapshots — это ок для lock-free reads. Но lookup по exact type приведёт к раздутию количества резолверов/дублированию логики (Integer/int, offline/online player, enum variants).
+
+## 4.3 Tree traversal complexity
+
+`route` формально O(depth * children_at_level) с линейным поиском по списку детей. Для 100+ команд с общими префиксами и ветвлением это станет заметным на горячем пути (особенно с частым tab completion).
+
+## 4.4 Blocking operations on main thread
+
+`SQLiteManager` только предупреждает (`warning`) при вызове с main thread, но **не блокирует** и не кидает исключение. То есть «защита» косметическая; кто угодно может выполнить тяжелый SQL прямо в тике.
+
+Плюс, `CompletableFuture.supplyAsync` использует общий ForkJoinPool, что в plugin-среде нежелательно: вы конкурируете за системный пул с остальными задачами JVM.
+
+## 4.5 SQLite safety
+
+Один shared `Connection` используется потенциально из нескольких async задач одновременно. JDBC/SQLite threading semantics для одного connection в таком режиме ненадёжны; легко получить `database is locked`, race по statement lifecycle и непредсказуемые задержки.
+
+---
+
+## 5) E) Extensibility audit
+
+## 5.1 Добавление новых argument types
+
+Да, теоретически через `ResolverRegistry#register`. Практически больно:
+
+- нет fallback chain по supertype/interface;
+- нет scoped resolver-ов (per-command/per-annotation);
+- нет parser-combinator для составных типов;
+- нет unified conversion/validation pipeline.
+
+## 5.2 Middleware introduction
+
+`CommandInterceptor` существует, но pipeline не предоставляет контрактов short-circuit/abort/result override. Интерцептор может только преобразовать context before/after stage. Это слишком слабая точка расширения для настоящего middleware.
+
+## 5.3 Async execution integration
+
+Ни `CommandStage`, ни `CommandPipeline` не async-aware (`CommandContext execute(...)` вместо `CompletionStage<CommandContext>`). Вставка асинхронных стадий потребует ломающего API-редизайна.
+
+## 5.4 Standalone extraction potential
+
+Вынести как самостоятельный framework можно только после:
+
+1) реализации реального runtime;
+2) удаления platform downcast leak;
+3) async-capable pipeline;
+4) четкого SPI для adapter-ов.
+
+Сейчас это «набор заготовок», не конкурентный framework artifact.
+
+---
+
+## 6) F) Приоритизированный roadmap
+
+## 6.1 Immediate fixes (высокий эффект, низкий риск)
+
+1. Убрать `catch(Throwable)` из pipeline. Ловить только `Exception`; fatal ошибки пробрасывать.
+2. Сделать `CommandContext` действительно immutable: вынести suggestion cache наружу (например, в request-scoped `ExecutionState`).
+3. Переписать `PaperPermissionEvaluator` без downcast (добавить метод permission-check в `CommandSenderAdapter` или отдельный capability).
+4. В `SQLiteManager`:
+   - выделить собственный `ExecutorService`;
+   - запретить main-thread SQL жёстко (exception);
+   - сериализовать доступ к SQLite (single-thread executor) или перейти на connection-per-operation + пул.
+5. Добавить shutdown hooks для `CooldownManager` executor и DB manager.
+
+## 6.2 Medium-term refactors
+
+1. Реализовать стадии pipeline по-настоящему, включая route->parse->validate->authorize->invoke.
+2. Ввести `CommandRuntime` (tree + pipeline + resolver registry + validation + error presenter) как единый orchestrator.
+3. Изменить `CommandTree` на map-based children lookup (`literalChildren` map + отдельная коллекция argument nodes с priority rules).
+4. Сделать typed error hierarchy + обязательное логирование stack trace на infrastructural errors.
+5. Ввести сигнатурную валидацию команд на этапе scan/register (fail-fast startup).
+
+## 6.3 Major redesign
+
+1. Async-first pipeline (`CompletionStage<CommandResult>`) + планировщик bridge на платформу.
+2. Middleware API уровня Cloud/ACF:
+   - pre-routing
+   - pre-parsing
+   - pre-invocation
+   - post-invocation
+   - on-error
+   - on-completion
+3. Condition system (permission, sender type, world, cooldown, custom predicates) как расширяемые policy-объекты.
+4. Выделить `command-bukkit-runtime` adapter со строгим binding к Bukkit command map и lifecycle.
+
+---
+
+## 7) G) Конкретные refactor-стратегии
+
+## 7.1 Ввести полноценный CommandContext + ExecutionState
+
+Разделить:
+
+- `CommandContext` (immutable, только вход + metadata + parsed args);
+- `ExecutionState` (mutable request-scope: caches, timings, diagnostics, middleware bag).
+
+Это уберёт скрытые мутации и облегчит трассировку.
+
+## 7.2 Ввести ExecutionPipeline v2
+
+```java
+interface CommandStage {
+  CompletionStage<StageResult> execute(CommandContext ctx, ExecutionState state);
+}
+
+sealed interface StageResult {
+  record Continue(CommandContext ctx) implements StageResult {}
+  record Stop(CommandResult result) implements StageResult {}
+}
+```
+
+Такой контракт решает short-circuit, async и контролируемое завершение.
+
+## 7.3 Разрезать core и Bukkit adapter жёстче
+
+- В core никаких downcast/знаний о Paper;
+- В адаптере — реализация `PlatformCommandBinder`, превращающая Bukkit events/commands в core runtime calls;
+- Протокол взаимодействия: только интерфейсы SPI.
+
+## 7.4 Middleware layer
+
+Вместо «списка интерцепторов before/after stage» сделать middleware chain уровня request lifecycle с возможностью:
+
+- замерять latency;
+- отменять выполнение;
+- подменять response;
+- добавлять audit trail и correlation IDs.
+
+## 7.5 Улучшение dependency inversion
+
+`CommandFrameworkBootstrap` должен принимать зависимости извне (DI-friendly):
+
+- `ResolverRegistry`
+- `ValidationService`
+- `ErrorPresenter`
+- `Scheduler`
+- `PermissionEvaluator`
+- `Audience`
+
+Иначе вы зацементировали «один bootstrap, одна конфигурация, ноль тестируемости».
+
+---
+
+## 8) H) Архитектурная зрелость: 3.9 / 10
+
+Оценка не 1/10 только потому, что:
+
+- уже есть модульная декомпозиция;
+- есть typed metadata model;
+- есть попытка pipeline/interceptor дизайна;
+- есть базовые платформенные абстракции.
+
+Но до production-grade framework уровня ACF/Cloud далеко из-за ключевых провалов: пустой runtime, дырявый integration layer, слабая модель extensibility, async-неготовность, и небезопасный persistence/threads подход.
+
+---
 
 ## 9) Сравнение с ACF / Cloud Command Framework
 
-Сейчас конкуренции нет.
+На текущем состоянии конкуренции нет вообще.
 
-Где проигрывает:
-- отсутствует строгая модель контекста команды,
-- отсутствует middleware/pipeline,
-- нет brigadier-level модели suggestions,
-- нет зрелой exception taxonomy + message bundles + i18n,
-- нет DI-интеграции,
-- нет модульности core/platform,
-- нет асинхронного execution contract,
-- нет declarative constraints/condition system,
-- нет robust test surface.
+Что мешает дотянуться до их уровня:
 
-Почему это критично: ACF/Cloud — это инфраструктура с расширяемыми точками. Здесь — набор utility-классов.
+1. Нет зрелого runtime (фактически нет исполнения).
+2. Нет rich command model (conditions, contexts, parsers, suggestions contracts).
+3. Нет battle-tested error/messaging/i18n системы.
+4. Нет полноценного async execution и thread-boundary guarantees.
+5. Нет экосистемы расширений и стабильного SPI.
+6. Нет production telemetry hooks (metrics, tracing, structured logs).
 
-## 10) Приоритетный roadmap
+Что нужно сделать, чтобы приблизиться:
 
-### Immediate (high impact / low risk)
-1. Починить `CommandMetadataCache`: отделить immutable metadata (на class/method) от binding instance.  
-2. Убрать `catch (Exception)` в tabComplete, логировать и возвращать безопасно диагностируемый результат.  
-3. В `CommandTree.add` добавить детекцию конфликтов пути с явным исключением.  
-4. Исправить API `CooldownManager` (`isOnCooldown` semantics), заменить `HashMap` на `ConcurrentHashMap`, добавить cleanup.
-5. В `SQLiteManager` запретить sync usage на main thread (guard + warning), исправить resource lifecycle (`ResultSet` wrapper/consumer API).
+1. Довести runtime до functional completeness (dispatcher + binder + completion).
+2. Сделать API стабильным и расширяемым (middleware, conditions, parser pipeline).
+3. Перевести инфраструктуру на async-safe модель с platform scheduler contract.
+4. Ввести compatibility/performance test matrix (100+ commands, 50+ players simulated).
+5. Поднять quality gate: mutation/unit/integration tests, static analysis, benchmark suite.
 
-### Medium-term refactor
-1. Ввести `CommandContext` (sender, root, path, rawArgs, parsedArgs, metadata, services).  
-2. Разбить `CommandDispatcher` на сервисы: `CommandRouter`, `AccessEvaluator`, `ArgumentParser`, `Invoker`, `HelpRenderer`, `CompletionEngine`.  
-3. Переделать `ResolverRegistry` в map-based индекс (`Class<?> -> ResolverChain`) + приоритеты.  
-4. Ввести `ValidationService` (range + custom validators).
+---
 
-### Major redesign
-1. Модульная архитектура:
-   - `command-core` (без Bukkit),
-   - `command-paper-adapter`,
-   - `command-annotations`.
-2. ExecutionPipeline/Interceptor chain:
-   - pre-parse,
-   - pre-execute,
-   - post-execute,
-   - on-error.
-3. Async command contract (`CompletionStage<Result>` + scheduler bridge к Bukkit main thread).
-4. Condition/Requirement system (permissions, sender type, world/region constraints) как расширяемые политики.
+## 10) Что сломается под нагрузкой (100+ команд, 50+ игроков)
 
-## 11) Конкретные стратегии рефакторинга
+1. Таб-комплит начнёт деградировать из-за наивного дерева и бедного кэш-ключа suggestions.
+2. Ошибки инфраструктуры будут теряться в generic «internal error», эксплуатация станет реактивным firefighting.
+3. SQLite даст lock-contention и рандомные задержки из-за shared connection + unbounded common pool.
+4. Lifecycle потечёт: scheduler у cooldown manager не закрывается, фоновые потоки переживут отключение плагина.
+5. Любая попытка добавить async-стадии команд приведёт к каскадному API-сломy из-за синхронного контракта pipeline.
 
-### 11.1 CommandContext
-Вместо рассыпанных параметров и локальных переменных ввести immutable context + mutable execution bag.
-
-### 11.2 ExecutionPipeline
-Интерфейс `CommandInterceptor`:
-- `beforeParse(ctx)`
-- `beforeExecute(ctx)`
-- `afterExecute(ctx, result)`
-- `onError(ctx, throwable)`
-
-Это откроет логирование, cooldown middleware, метрики, транзакционные обёртки.
-
-### 11.3 Core vs Bukkit adapter
-- В core: `Sender`, `PermissionChecker`, `Audience`, `CommandPlatformScheduler` — абстракции.
-- В adapter: маппинг на Bukkit `CommandSender/Player`.
-
-### 11.4 Dependency inversion
-`CommandRegistry` не должен принимать `JavaPlugin`. Он должен принимать интерфейсы `PlatformCommandBinder`, `Logger`, `Scheduler`, `AudienceProvider`.
-
-### 11.5 Typed error model
-Вместо одного `CommandException` ввести категории:
-- `UserInputError`
-- `AuthorizationError`
-- `ExecutionError`
-- `InfrastructureError`
-
-И единый `ErrorPresenter`, независимый от Bukkit ChatColor.
-
-## 12) Оценка зрелости архитектуры
-
-**3.2 / 10**
-
-Обоснование:
-- Есть зачатки структуры (аннотации, дерево, резолверы, error handler).
-- Но нет модульности, нет зрелой модели расширения, есть критический баг в metadata cache, нет безопасной стратегии работы с БД, и core не отделён от платформы.
-- Для production-grade командного фреймворка это уровень прототипа, а не инфраструктурного компонента.
+Это не гипотетика, это ожидаемое поведение текущего кода.
