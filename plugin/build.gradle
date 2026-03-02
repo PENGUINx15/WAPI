@@ -1,4 +1,7 @@
-plugins { id 'java' }
+plugins {
+    id 'java'
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+}
 
 dependencies {
     implementation project(':command-annotations')
@@ -21,4 +24,16 @@ processResources {
     filesMatching('plugin.yml') {
         expand props
     }
+}
+
+tasks.named('jar') {
+    enabled = false
+}
+
+tasks.named('shadowJar') {
+    archiveClassifier.set('')
+}
+
+tasks.named('build') {
+    dependsOn tasks.named('shadowJar')
 }
