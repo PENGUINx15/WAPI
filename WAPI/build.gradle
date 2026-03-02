@@ -31,6 +31,7 @@ tasks.named('jar') {
 }
 
 tasks.named('shadowJar') {
+    archiveBaseName.set('WAPI')
     archiveClassifier.set('')
 }
 
