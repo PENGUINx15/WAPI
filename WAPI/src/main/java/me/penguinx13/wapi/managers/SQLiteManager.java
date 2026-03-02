@@ -5,9 +5,9 @@ import org.bukkit.plugin.Plugin;
 
 import java.io.File;
 import java.sql.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.*;
 
-public class SQLiteManager {
+public final class SQLiteManager {
 
     @FunctionalInterface
     public interface ResultSetMapper<T> {
@@ -16,69 +16,61 @@ public class SQLiteManager {
 
     private final Plugin plugin;
     private final String databaseFileName;
-    private volatile Connection connection;
+    private final ExecutorService dbExecutor;
+    private volatile boolean closed;
 
     public SQLiteManager(Plugin plugin, String databaseFileName) {
         this.plugin = plugin;
         this.databaseFileName = databaseFileName;
-    }
-
-    public synchronized void connect() {
-        if (isConnected()) return;
-        try {
-            if (!plugin.getDataFolder().exists() && !plugin.getDataFolder().mkdirs()) {
-                throw new IllegalStateException("Cannot create plugin data folder");
-            }
-            File databaseFile = new File(plugin.getDataFolder(), databaseFileName);
-            connection = DriverManager.getConnection("jdbc:sqlite:" + databaseFile.getAbsolutePath());
-        } catch (SQLException ex) {
-            throw new IllegalStateException("Cannot connect to SQLite database", ex);
-        }
-    }
-
-    public synchronized void disconnect() {
-        if (!isConnected()) return;
-        try {
-            connection.close();
-            connection = null;
-        } catch (SQLException ex) {
-            throw new IllegalStateException("Cannot close SQLite connection", ex);
-        }
-    }
-
-    public synchronized boolean isConnected() {
-        try {
-            return connection != null && !connection.isClosed();
-        } catch (SQLException ex) {
-            return false;
-        }
-    }
-
-    public CompletableFuture<Integer> executeUpdateAsync(String sql, Object... params) {
-        assertNotPrimaryThread("executeUpdateAsync");
-        return CompletableFuture.supplyAsync(() -> {
-            try (PreparedStatement statement = prepareStatement(sql, params)) {
-                return statement.executeUpdate();
-            } catch (SQLException ex) {
-                throw new IllegalStateException("Cannot execute update", ex);
-            }
+        this.dbExecutor = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "wapi-sqlite");
+            t.setDaemon(true);
+            return t;
         });
     }
 
-    public <T> CompletableFuture<T> query(String sql, Object[] params, ResultSetMapper<T> mapper) {
-        assertNotPrimaryThread("query");
+    public CompletionStage<Integer> update(String sql, Object... params) {
+        ensureNotMainThread("update");
         return CompletableFuture.supplyAsync(() -> {
-            try (PreparedStatement statement = prepareStatement(sql, params);
+            try (Connection connection = openConnection();
+                 PreparedStatement statement = prepare(connection, sql, params)) {
+                return statement.executeUpdate();
+            } catch (SQLException ex) {
+                throw new CompletionException(new IllegalStateException("Cannot execute update", ex));
+            }
+        }, dbExecutor);
+    }
+
+    public <T> CompletionStage<T> query(String sql, Object[] params, ResultSetMapper<T> mapper) {
+        ensureNotMainThread("query");
+        return CompletableFuture.supplyAsync(() -> {
+            try (Connection connection = openConnection();
+                 PreparedStatement statement = prepare(connection, sql, params);
                  ResultSet rs = statement.executeQuery()) {
                 return mapper.map(rs);
             } catch (SQLException ex) {
-                throw new IllegalStateException("Cannot execute query", ex);
+                throw new CompletionException(new IllegalStateException("Cannot execute query", ex));
             }
-        });
+        }, dbExecutor);
     }
 
-    private PreparedStatement prepareStatement(String sql, Object... params) throws SQLException {
-        connect();
+    public void shutdown() {
+        closed = true;
+        dbExecutor.shutdown();
+    }
+
+    private Connection openConnection() throws SQLException {
+        if (closed) {
+            throw new IllegalStateException("SQLiteManager is closed");
+        }
+        if (!plugin.getDataFolder().exists() && !plugin.getDataFolder().mkdirs()) {
+            throw new IllegalStateException("Cannot create plugin data folder");
+        }
+        File dbFile = new File(plugin.getDataFolder(), databaseFileName);
+        return DriverManager.getConnection("jdbc:sqlite:" + dbFile.getAbsolutePath());
+    }
+
+    private PreparedStatement prepare(Connection connection, String sql, Object... params) throws SQLException {
         PreparedStatement statement = connection.prepareStatement(sql);
         for (int i = 0; i < params.length; i++) {
             statement.setObject(i + 1, params[i]);
@@ -86,9 +78,9 @@ public class SQLiteManager {
         return statement;
     }
 
-    private void assertNotPrimaryThread(String operation) {
+    private void ensureNotMainThread(String operation) {
         if (Bukkit.isPrimaryThread()) {
-            plugin.getLogger().warning("SQLite " + operation + " invoked from main thread; call from async context.");
+            throw new IllegalStateException("SQLite " + operation + " must not run on the main thread.");
         }
     }
 }

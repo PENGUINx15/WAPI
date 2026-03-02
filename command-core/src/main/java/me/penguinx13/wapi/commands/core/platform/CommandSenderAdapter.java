@@ -7,4 +7,6 @@ public interface CommandSenderAdapter {
     UUID uniqueId();
     boolean isPlayer();
     void sendMessage(String message);
+    Object unwrap();
+    Class<?> platformSenderType();
 }

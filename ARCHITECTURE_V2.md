@@ -1,41 +1,103 @@
-# WAPI Command Framework V2
+# WAPI Command Architecture V2
 
-## Textual architecture diagram
+## 1) Runtime Architecture (text diagram)
 
 ```
-plugin (integration)
-  -> command-paper-adapter
-      -> command-core
-          -> command-annotations
+Paper/Bukkit CommandMap
+   -> PaperCommandBinder
+      -> CommandRuntime.executeAndRespond()
+         -> MiddlewareChain
+            -> CommandPipeline
+               [Routing -> Parsing -> Validation -> Condition/Auth -> Cooldown -> Invocation -> Post]
+         -> ErrorPresenter
+         -> PlatformBridge.deliverResult()
 ```
 
-Execution flow:
-`Paper command -> CommandContext -> Pipeline (Routing -> Parsing -> Validation -> Authorization -> Cooldown -> Invocation -> PostProcessing -> ErrorHandling)`.
+### Runtime ownership
+`CommandRuntime` owns:
+- `CommandTree`
+- `CommandPipeline`
+- `ResolverRegistry`
+- `ValidationService`
+- `ErrorPresenter`
+- `MiddlewareChain` input list
+- `PlatformBridge`
+- `MetricsSink`
 
-## Module structure
+## 2) Module structure
 
-- `command-annotations`: annotation model (`@RootCommand`, `@SubCommand`, `@Arg`, `@Range`, `@Min`, `@Max`, `@Regex`).
-- `command-core`: metadata cache, immutable command tree, resolver registry, validation service, pipeline, typed errors, completion engine, platform interfaces.
-- `command-paper-adapter`: Paper sender adapters, scheduler, logger, audience, permission, error presenter.
-- `plugin`: real plugin wiring and command registration.
+- `command-core`: platform-agnostic runtime, tree, pipeline, middleware, resolver SPI, validation SPI, metrics SPI.
+- `command-annotations`: annotation command model.
+- `command-paper-adapter`: Paper sender adapters, binders, schedulers, player resolver, error presenter.
+- `plugin` (`WAPI`): bootstrap and plugin wiring.
 
-## Migration guide (old -> new)
+## 3) Key implementations
 
-1. Move command annotations imports to `me.penguinx13.wapi.commands.annotations.*`.
-2. Replace `CommandRegistry` usage with `CommandFrameworkBootstrap`.
-3. Use `CooldownManager#isOnCooldown` + `markCooldown` semantics.
-4. Replace `SQLiteManager#executeQuery` raw `ResultSet` usage with `query(sql, params, mapper)`.
-5. Register custom resolvers through `ResolverRegistry#register` with priorities.
-6. Register custom validation rules through `ValidationService#register`.
+- Async-first `CommandStage` + sealed `StageResult`.
+- `CommandContext` immutable; `ExecutionState` mutable request-scope state.
+- Deterministic tree routing with literal-first then argument edge.
+- Resolver V2: assignable types, primitive-wrapper normalization, enum fallback.
+- Middleware lifecycle via `CommandMiddleware#handle(CommandInvocation, MiddlewareChain)`.
+- Error hierarchy rooted at `CommandException`; `Error` is rethrown.
 
-## Performance evaluation notes (target scale)
+## 4) Example command definition
 
-- 100+ commands: immutable `CommandTree` provides O(depth) routing and lock-free reads.
-- 50+ concurrent players: runtime registries use concurrent collections and immutable snapshots for reads.
-- Heavy tab completion: `CompletionEngine` keeps per-request suggestion cache and async resolver API.
+```java
+@RootCommand("main")
+class MainCommand {
+  @SubCommand("give")
+  public void give(Player sender, @Arg("target") Player target, @Arg("amount") int amount) {}
+}
+```
 
-## Trade-offs
+## 5) Example Paper binding
 
-- Chosen reflection-based metadata scanning for annotation compatibility; startup overhead increases slightly, runtime cost drops due to immutable caching.
-- Pipeline stage classes are explicit and extensible, but setup is more verbose.
-- `CompletableFuture` suggestion/query APIs increase complexity but prevent main-thread blocking at scale.
+`CommandFrameworkBootstrap#buildAndBind()`:
+1. Build tree from scanned metadata.
+2. Build runtime.
+3. Create `PaperCommandBinder`.
+4. Register Bukkit executor for root command from `plugin.yml`.
+
+## 6) Migration guide
+
+1. Replace direct `CommandPipeline` usage with `CommandRuntime`.
+2. Move mutable request data from context to `ExecutionState`.
+3. Register resolvers through `ResolverRegistry.register(...)`.
+4. Replace legacy exceptions with `CommandException` subtypes.
+5. Integrate platform response through `PlatformBridge`.
+
+## 7) Thread-safety model
+
+- `CommandContext`: immutable, thread-safe.
+- `ExecutionState`: request-local mutable maps only.
+- Async command execution via explicit scheduler/executor.
+- SQLite uses dedicated single-thread executor and no shared global connection.
+- Main-thread DB access is rejected.
+
+## 8) Performance characteristics
+
+- O(depth) deterministic routing.
+- Literal map lookup on hot path, no stream scanning.
+- Async pipeline avoids blocking main thread for async-capable handlers.
+- Suggestion cache in execution state keyed by full path + raw input.
+
+## 9) Testing strategy
+
+- Unit: tree conflict detection, resolver matching order, validator behavior.
+- Unit: pipeline short-circuit + cancellation.
+- Integration: command invoke from Paper sender adapter.
+- Concurrency: completion/cache under parallel invocations.
+- Failure-path: infrastructure exceptions and presenter behavior.
+
+## 10) Comparison vs original WAPI
+
+| Area | Old | V2 |
+|---|---|---|
+| Pipeline | sync, mutable | async-first, structured `StageResult` |
+| Runtime | implicit wiring | explicit `CommandRuntime` orchestration |
+| Tree | stream scans | deterministic maps/lists |
+| Resolver | exact class only | assignable + enum fallback |
+| Middleware | weak before/after hooks | lifecycle chain with override/cancel |
+| Errors | catch-all `Throwable` | strict hierarchy + fatal error propagation |
+| SQLite | common-pool + shared connection | single-thread DB executor, per-op connection |
+| Platform boundary | core leaks risk | hard SPI (`PlatformBridge`, binder in adapter) |
