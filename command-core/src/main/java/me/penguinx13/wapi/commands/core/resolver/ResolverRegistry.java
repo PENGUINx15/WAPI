@@ -12,7 +12,7 @@ public final class ResolverRegistry {
             throw new IllegalStateException("Conflicting resolver priority for " + resolver.supports().getName());
         }
         chain.add(resolver);
-        chain.sort(Comparator.comparingInt(ArgumentResolver::priority).reversed());
+        chain.sort(Comparator.comparingInt((ArgumentResolver<?> r) -> r.priority()).reversed());
         index.put(resolver.supports(), List.copyOf(chain));
     }
 
