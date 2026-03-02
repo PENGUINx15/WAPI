@@ -24,7 +24,7 @@ public final class ResolverRegistry {
     public synchronized <T> void register(ArgumentResolver<T> resolver) {
         List<ArgumentResolver<?>> chain = new ArrayList<>(resolvers.getOrDefault(normalize(resolver.supports()), List.of()));
         chain.add(resolver);
-        chain.sort(Comparator.comparingInt(ArgumentResolver::priority).reversed());
+        chain.sort(Comparator.comparingInt((ArgumentResolver<?> resolver) -> resolver.priority()).reversed());
         resolvers.put(normalize(resolver.supports()), List.copyOf(chain));
     }
 
@@ -38,7 +38,7 @@ public final class ResolverRegistry {
             }
         }
 
-        candidates.sort(Comparator.comparingInt(ArgumentResolver::priority).reversed());
+        candidates.sort(Comparator.comparingInt((ArgumentResolver<?> resolver) -> resolver.priority()).reversed());
         for (ArgumentResolver<?> candidate : candidates) {
             if (candidate.canResolve(metadata)) {
                 return candidate;
@@ -46,7 +46,9 @@ public final class ResolverRegistry {
         }
 
         if (targetType.isEnum()) {
-            return new EnumArgumentResolver(targetType.asSubclass(Enum.class));
+            @SuppressWarnings("unchecked")
+            Class<? extends Enum<?>> enumType = (Class<? extends Enum<?>>) targetType.asSubclass(Enum.class);
+            return new EnumArgumentResolver(enumType);
         }
 
         throw new UserInputException("No resolver found for argument '" + metadata.name() + "' of type " + metadata.type().getSimpleName());

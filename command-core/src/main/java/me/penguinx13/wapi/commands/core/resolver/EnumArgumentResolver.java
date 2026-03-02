@@ -20,7 +20,7 @@ public final class EnumArgumentResolver implements ArgumentResolver<Enum<?>> {
     @SuppressWarnings("unchecked")
     @Override
     public Class<Enum<?>> supports() {
-        return (Class<Enum<?>>) Enum.class;
+        return (Class<Enum<?>>) (Class<?>) Enum.class;
     }
 
     @Override
