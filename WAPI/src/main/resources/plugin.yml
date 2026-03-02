@@ -1,16 +1,22 @@
-name: WAPI
+name: WAPIEnterpriseShowcase
 version: '${version}'
 main: me.penguinx13.wapi.WAPI
 api-version: '1.19'
 softdepend: [PlaceholderAPI]
 commands:
-  main:
-    description: Root command for annotation command framework examples.
-    usage: /main <subcommand>
+  enterprise:
+    description: Enterprise administration and utility suite.
+    usage: /enterprise <subcommand>
 permissions:
-  wapi.main:
+  wapi.enterprise:
     default: op
-  wapi.main.reload:
+  wapi.enterprise.reload:
     default: op
-  wapi.main.give:
+  wapi.enterprise.user.create:
+    default: op
+  wapi.enterprise.user.info:
+    default: op
+  wapi.enterprise.user.delete:
+    default: op
+  wapi.enterprise.give:
     default: op

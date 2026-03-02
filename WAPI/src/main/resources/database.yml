@@ -1,0 +1,3 @@
+sqlite:
+  file: "enterprise.db"
+  pool-size: 2

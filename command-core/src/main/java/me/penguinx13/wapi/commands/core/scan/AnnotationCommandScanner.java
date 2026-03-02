@@ -31,7 +31,7 @@ public final class AnnotationCommandScanner implements CommandMetadataCache.Meta
             Arg arg = p.getAnnotation(Arg.class);
             if (arg == null) continue;
             List<Annotation> validations = Arrays.stream(p.getAnnotations())
-                    .filter(a -> a.annotationType() == Range.class || a.annotationType() == Min.class || a.annotationType() == Max.class || a.annotationType() == Regex.class)
+                    .filter(a -> a.annotationType() != Arg.class)
                     .toList();
             args.add(new ArgumentMetadata(arg.value(), p.getType(), arg.optional(), arg.defaultValue(), i, validations, p));
         }
