@@ -1,0 +1,24 @@
+plugins { id 'java' }
+
+dependencies {
+    implementation project(':command-annotations')
+    implementation project(':command-core')
+    implementation project(':command-paper-adapter')
+
+    compileOnly 'io.papermc.paper:paper-api:1.19.4-R0.1-SNAPSHOT'
+    compileOnly 'me.clip:placeholderapi:2.11.6'
+
+    implementation 'com.mojang:authlib:1.5.25'
+    implementation 'commons-codec:commons-codec:1.15'
+    implementation 'com.google.code.gson:gson:2.8.9'
+    implementation 'org.xerial:sqlite-jdbc:3.46.1.3'
+}
+
+processResources {
+    def props = [version: rootProject.version]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching('plugin.yml') {
+        expand props
+    }
+}
