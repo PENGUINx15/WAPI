@@ -1,6 +1,5 @@
 package me.penguinx13.wapi.commands.core.resolver;
 
-import me.penguinx13.wapi.commands.core.context.CommandContext;
 import me.penguinx13.wapi.commands.core.error.UserInputException;
 import me.penguinx13.wapi.commands.core.metadata.ArgumentMetadata;
 
@@ -24,11 +23,11 @@ public final class ResolverRegistry {
     public synchronized <T> void register(ArgumentResolver<T> resolver) {
         List<ArgumentResolver<?>> chain = new ArrayList<>(resolvers.getOrDefault(normalize(resolver.supports()), List.of()));
         chain.add(resolver);
-        chain.sort(Comparator.comparingInt((ArgumentResolver<?> resolver) -> resolver.priority()).reversed());
+        chain.sort(Comparator.comparingInt((ArgumentResolver<?> r) -> r.priority()).reversed());
         resolvers.put(normalize(resolver.supports()), List.copyOf(chain));
     }
 
-    public ArgumentResolver<?> resolve(ArgumentMetadata metadata, CommandContext context) {
+    public ArgumentResolver<?> resolve(ArgumentMetadata metadata) {
         Class<?> targetType = normalize(metadata.type());
         List<ArgumentResolver<?>> candidates = new ArrayList<>();
 
@@ -38,7 +37,7 @@ public final class ResolverRegistry {
             }
         }
 
-        candidates.sort(Comparator.comparingInt((ArgumentResolver<?> resolver) -> resolver.priority()).reversed());
+        candidates.sort(Comparator.comparingInt((ArgumentResolver<?> r) -> r.priority()).reversed());
         for (ArgumentResolver<?> candidate : candidates) {
             if (candidate.canResolve(metadata)) {
                 return candidate;

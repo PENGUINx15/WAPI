@@ -29,7 +29,7 @@ public final class CompletionEngine {
 
         CommandRuntime runtime = context.service(CommandRuntime.class);
         ArgumentMetadata nextArgument = bound.metadata().arguments().get(Math.min(context.parsedArguments().size(), bound.metadata().arguments().size() - 1));
-        ArgumentResolver<?> resolver = runtime.resolverRegistry().resolve(nextArgument, context);
+        ArgumentResolver<?> resolver = runtime.resolverRegistry().resolve(nextArgument);
         String currentToken = context.tokens().isEmpty() ? "" : context.tokens().get(context.tokens().size() - 1);
         return resolver.suggest(currentToken, nextArgument, context).thenApply(suggestions -> {
             state.suggestionCache().put(cacheKey, suggestions);

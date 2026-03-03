@@ -35,7 +35,7 @@ public final class ArgumentParsingStage implements CommandStage {
             if (token == null) {
                 return CompletableFuture.failedStage(new UserInputException("Missing required argument: " + argument.name()));
             }
-            ArgumentResolver<?> resolver = runtime.resolverRegistry().resolve(argument, context);
+            ArgumentResolver<?> resolver = runtime.resolverRegistry().resolve(argument);
             String finalToken = token;
             chain = chain.thenCompose(v -> resolver.parse(finalToken, argument, context)
                     .thenAccept(value -> parsed.put(argument.name(), value)));

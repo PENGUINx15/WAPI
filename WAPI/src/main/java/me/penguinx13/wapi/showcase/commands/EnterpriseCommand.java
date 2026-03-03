@@ -117,7 +117,7 @@ public final class EnterpriseCommand {
 
     @SubCommand(value = "entity name")
     public void entityName(CommandSender sender, @Arg("type") EntityType type) {
-        sender.sendMessage("Localized entity: " + EntityName.entityTypeToName(type));
+        sender.sendMessage("Localized entity: " + EntityName.getName(type));
     }
 
     @SubCommand(value = "stats")

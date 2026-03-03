@@ -48,7 +48,7 @@ public final class CommandTree {
     public static final class Builder {
         private final MutableNode root = new MutableNode("", NodeType.LITERAL, null);
 
-        public Builder add(BoundCommandMethod method) {
+        public void add(BoundCommandMethod method) {
             MutableNode cursor = root;
             List<String> fullPath = new ArrayList<>();
             fullPath.add(method.metadata().root());
@@ -68,7 +68,6 @@ public final class CommandTree {
                 throw new CommandTreeBuildException("Path conflict: " + String.join(" ", fullPath));
             }
             cursor.handler = method;
-            return this;
         }
 
         public CommandTree build() {
