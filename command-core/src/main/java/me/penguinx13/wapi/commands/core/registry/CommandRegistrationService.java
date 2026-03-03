@@ -1,6 +1,7 @@
 package me.penguinx13.wapi.commands.core.registry;
 
-import me.penguinx13.wapi.commands.core.metadata.*;
+import me.penguinx13.wapi.commands.core.metadata.BoundCommandMethod;
+import me.penguinx13.wapi.commands.core.metadata.CommandMetadataCache;
 import me.penguinx13.wapi.commands.core.scan.AnnotationCommandScanner;
 import me.penguinx13.wapi.commands.core.tree.CommandTree;
 

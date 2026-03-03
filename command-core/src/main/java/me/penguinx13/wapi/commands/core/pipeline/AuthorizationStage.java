@@ -19,9 +19,14 @@ public final class AuthorizationStage implements CommandStage {
         }
 
         String permission = method.metadata().permission();
-        if (permission != null && !permission.isBlank() && permissionEvaluator != null && !permissionEvaluator.hasPermission(context.sender(), permission)) {
+        boolean missingPermission = permission != null
+                && !permission.isBlank()
+                && permissionEvaluator != null
+                && !permissionEvaluator.hasPermission(context.sender(), permission);
+        if (missingPermission) {
             throw new AuthorizationException("You do not have permission to execute this command.");
         }
+
         return CompletableFuture.completedFuture(StageResult.next(context));
     }
 }

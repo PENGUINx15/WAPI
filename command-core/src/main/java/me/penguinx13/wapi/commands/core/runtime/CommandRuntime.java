@@ -6,7 +6,10 @@ import me.penguinx13.wapi.commands.core.context.ExecutionState;
 import me.penguinx13.wapi.commands.core.error.CommandException;
 import me.penguinx13.wapi.commands.core.error.ErrorPresenter;
 import me.penguinx13.wapi.commands.core.error.InfrastructureException;
-import me.penguinx13.wapi.commands.core.pipeline.*;
+import me.penguinx13.wapi.commands.core.pipeline.CommandInvocation;
+import me.penguinx13.wapi.commands.core.pipeline.CommandMiddleware;
+import me.penguinx13.wapi.commands.core.pipeline.CommandPipeline;
+import me.penguinx13.wapi.commands.core.pipeline.MiddlewareChain;
 import me.penguinx13.wapi.commands.core.resolver.ResolverRegistry;
 import me.penguinx13.wapi.commands.core.result.CommandResult;
 import me.penguinx13.wapi.commands.core.spi.MetricsSink;
@@ -18,6 +21,7 @@ import me.penguinx13.wapi.commands.core.validation.ValidationService;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.CompletionStage;
 
 public final class CommandRuntime {
@@ -31,26 +35,40 @@ public final class CommandRuntime {
     private final MetricsSink metricsSink;
     private final CompletionEngine completionEngine;
 
-    public CommandRuntime(CommandTree tree,
-                          CommandPipeline pipeline,
-                          ResolverRegistry resolverRegistry,
-                          ValidationService validationService,
-                          ErrorPresenter errorPresenter,
-                          List<CommandMiddleware> middleware,
-                          PlatformBridge platformBridge,
-                          MetricsSink metricsSink) {
-        this(tree, pipeline, resolverRegistry, validationService, errorPresenter, middleware, platformBridge, metricsSink, new CompletionEngine());
+    public CommandRuntime(
+            CommandTree tree,
+            CommandPipeline pipeline,
+            ResolverRegistry resolverRegistry,
+            ValidationService validationService,
+            ErrorPresenter errorPresenter,
+            List<CommandMiddleware> middleware,
+            PlatformBridge platformBridge,
+            MetricsSink metricsSink
+    ) {
+        this(
+                tree,
+                pipeline,
+                resolverRegistry,
+                validationService,
+                errorPresenter,
+                middleware,
+                platformBridge,
+                metricsSink,
+                new CompletionEngine()
+        );
     }
 
-    public CommandRuntime(CommandTree tree,
-                          CommandPipeline pipeline,
-                          ResolverRegistry resolverRegistry,
-                          ValidationService validationService,
-                          ErrorPresenter errorPresenter,
-                          List<CommandMiddleware> middleware,
-                          PlatformBridge platformBridge,
-                          MetricsSink metricsSink,
-                          CompletionEngine completionEngine) {
+    public CommandRuntime(
+            CommandTree tree,
+            CommandPipeline pipeline,
+            ResolverRegistry resolverRegistry,
+            ValidationService validationService,
+            ErrorPresenter errorPresenter,
+            List<CommandMiddleware> middleware,
+            PlatformBridge platformBridge,
+            MetricsSink metricsSink,
+            CompletionEngine completionEngine
+    ) {
         this.tree = tree;
         this.pipeline = pipeline;
         this.resolverRegistry = resolverRegistry;
@@ -62,14 +80,28 @@ public final class CommandRuntime {
         this.completionEngine = completionEngine;
     }
 
-    public CommandTree tree() { return tree; }
-    public ResolverRegistry resolverRegistry() { return resolverRegistry; }
-    public ValidationService validationService() { return validationService; }
-    public PlatformBridge platformBridge() { return platformBridge; }
+    public CommandTree tree() {
+        return tree;
+    }
+
+    public ResolverRegistry resolverRegistry() {
+        return resolverRegistry;
+    }
+
+    public ValidationService validationService() {
+        return validationService;
+    }
+
+    public PlatformBridge platformBridge() {
+        return platformBridge;
+    }
 
     public CompletionStage<CommandResult> execute(CommandContext context, ExecutionState state) {
         long start = System.nanoTime();
-        MiddlewareChain chain = new MiddlewareChain(middleware, invocation -> pipeline.execute(invocation.context(), invocation.state()));
+        MiddlewareChain chain = new MiddlewareChain(
+                middleware,
+                invocation -> pipeline.execute(invocation.context(), invocation.state())
+        );
 
         return chain.next(new CommandInvocation(context, state))
                 .handle((result, throwable) -> {
@@ -77,8 +109,12 @@ public final class CommandRuntime {
                     if (throwable == null) {
                         finalResult = result;
                     } else {
-                        Throwable cause = throwable instanceof java.util.concurrent.CompletionException ce ? ce.getCause() : throwable;
-                        if (cause instanceof Error error) throw error;
+                        Throwable cause = throwable instanceof CompletionException ce
+                                ? ce.getCause()
+                                : throwable;
+                        if (cause instanceof Error error) {
+                            throw error;
+                        }
                         CommandException wrapped = cause instanceof CommandException commandException
                                 ? commandException
                                 : new InfrastructureException("Unhandled command failure", cause);
