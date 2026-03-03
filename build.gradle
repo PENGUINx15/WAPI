@@ -27,10 +27,12 @@ subprojects {
         options.release.set(17)
     }
 
-    publishing {
-        publications {
-            mavenJava(MavenPublication) {
-                from components.java
+    if (project.name != 'WAPI') {
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    from components.java
+                }
             }
         }
     }
