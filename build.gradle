@@ -5,11 +5,12 @@ plugins {
 group = 'com.github.PENGUINx15'
 version = '2.0.0'
 
-subprojects {
+ext {
+    javaVersion = 17
+    checkstyleVersion = '10.12.4'
+}
 
-    apply plugin: 'java-library'
-    apply plugin: 'maven-publish'
-
+allprojects {
     repositories {
         mavenCentral()
         maven { url = 'https://repo.papermc.io/repository/maven-public/' }
@@ -17,21 +18,51 @@ subprojects {
         maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
         maven { url = 'https://libraries.minecraft.net/' }
     }
+}
+
+subprojects {
+
+    apply plugin: 'java-library'
+    apply plugin: 'maven-publish'
+    apply plugin: 'checkstyle'
 
     java {
-        toolchain.languageVersion = JavaLanguageVersion.of(17)
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(javaVersion)
+        }
+        withSourcesJar()
+        withJavadocJar()
     }
 
     tasks.withType(JavaCompile).configureEach {
         options.encoding = 'UTF-8'
-        options.release.set(17)
+        options.release.set(javaVersion)
     }
 
-    if (project.name != 'wapi-example') {
+    tasks.withType(Test).configureEach {
+        useJUnitPlatform()
+    }
+
+    checkstyle {
+        toolVersion = checkstyleVersion
+        configDirectory = file("$rootDir/config/checkstyle")
+    }
+
+    tasks.withType(Checkstyle).configureEach {
+        reports {
+            xml.required = false
+            html.required = true
+        }
+    }
+
+    if (!['WAPI', 'wapi-example'].contains(project.name)) {
         publishing {
             publications {
                 mavenJava(MavenPublication) {
                     from components.java
+                    groupId = project.group
+                    artifactId = project.name
+                    version = project.version
                 }
             }
         }
