@@ -19,7 +19,8 @@ public final class AuditMiddleware implements CommandMiddleware {
     public CompletionStage<CommandResult> handle(CommandInvocation invocation, MiddlewareChain chain) {
         return chain.next(invocation).thenApply(result -> {
             String commandName = invocation.context().command().map(c -> String.join(" ", c.metadata().path())).orElse("unknown");
-            plugin.getLogger().info("AUDIT sender=" + invocation.context().sender().name() + " command=" + commandName + " success=" + result.success());
+            plugin.getLogger().info(
+                    "AUDIT sender=" + invocation.context().sender().name() + " command=" + commandName + " success=" + result.success());
             return result;
         });
     }

@@ -14,7 +14,6 @@
         <module name="UnusedImports"/>
         <module name="AvoidStarImport">
             <property name="allowClassImports" value="true"/>
-            <property name="allowStaticStarImports" value="true"/>
         </module>
         <module name="NeedBraces">
             <property name="allowSingleLineStatement" value="true"/>

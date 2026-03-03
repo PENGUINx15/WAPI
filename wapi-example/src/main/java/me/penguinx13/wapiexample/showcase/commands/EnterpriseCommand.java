@@ -147,6 +147,8 @@ public final class EnterpriseCommand {
                 Thread.currentThread().interrupt();
             }
         }, heavyExecutor).thenRun(() -> Bukkit.getScheduler().runTask(plugin,
-                () -> MessageManager.sendMessage(sender, "{message}<green>Heavy async task completed in {seconds}s</green>", Map.of("seconds", seconds))));
+                () -> MessageManager.sendMessage(sender,
+                        "{message}<green>Heavy async task completed in {seconds}s</green>",
+                        Map.of("seconds", seconds))));
     }
 }

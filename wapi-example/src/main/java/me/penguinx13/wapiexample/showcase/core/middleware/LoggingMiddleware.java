@@ -19,7 +19,8 @@ public final class LoggingMiddleware implements CommandMiddleware {
     public CompletionStage<CommandResult> handle(CommandInvocation invocation, MiddlewareChain chain) {
         long start = System.nanoTime();
         var state = invocation.state();
-        plugin.getLogger().info("Command start correlationId=" + state.correlationId() + " input='" + invocation.context().rawInput() + "'");
+        plugin.getLogger().info(
+                "Command start correlationId=" + state.correlationId() + " input='" + invocation.context().rawInput() + "'");
         return chain.next(invocation).thenApply(result -> {
             long elapsed = System.nanoTime() - start;
             plugin.getLogger().info("Command finish correlationId=" + state.correlationId() + " latencyMs=" + (elapsed / 1_000_000.0));
