@@ -6,6 +6,7 @@ public interface CommandSenderAdapter {
     String name();
     UUID uniqueId();
     boolean isPlayer();
+    boolean hasPermission(String permission);
     void sendMessage(String message);
     Object unwrap();
     Class<?> platformSenderType();

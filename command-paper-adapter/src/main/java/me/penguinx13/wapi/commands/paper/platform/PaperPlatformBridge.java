@@ -4,6 +4,7 @@ import me.penguinx13.wapi.commands.core.context.CommandContext;
 import me.penguinx13.wapi.commands.core.platform.CommandSenderAdapter;
 import me.penguinx13.wapi.commands.core.result.CommandResult;
 import me.penguinx13.wapi.commands.core.spi.PlatformBridge;
+import me.penguinx13.wapi.commands.core.spi.SuggestionSink;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -33,6 +34,10 @@ public final class PaperPlatformBridge implements PlatformBridge {
 
     @Override
     public CompletionStage<Void> deliverSuggestions(CommandContext context, List<String> suggestions) {
+        SuggestionSink sink = context.service(SuggestionSink.class);
+        if (sink != null) {
+            sink.accept(List.copyOf(suggestions));
+        }
         return CompletableFuture.completedFuture(null);
     }
 }
