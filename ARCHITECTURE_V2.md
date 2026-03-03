@@ -29,7 +29,7 @@ Paper/Bukkit CommandMap
 - `command-core`: platform-agnostic runtime, tree, pipeline, middleware, resolver SPI, validation SPI, metrics SPI.
 - `command-annotations`: annotation command model.
 - `command-paper-adapter`: Paper sender adapters, binders, schedulers, player resolver, error presenter.
-- `plugin` (`WAPI`): bootstrap and plugin wiring.
+- `plugin` (`wapi-example`): bootstrap and plugin wiring for the example implementation.
 
 ## 3) Key implementations
 

@@ -27,7 +27,7 @@ subprojects {
         options.release.set(17)
     }
 
-    if (project.name != 'WAPI') {
+    if (project.name != 'wapi-example') {
         publishing {
             publications {
                 mavenJava(MavenPublication) {

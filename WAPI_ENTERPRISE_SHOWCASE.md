@@ -4,7 +4,7 @@
 - `command-annotations`: command + validation annotations (`@RootCommand`, `@SubCommand`, `@Arg`, `@Min`, `@Max`, `@Range`, `@Regex`, `@NotReservedName`).
 - `command-core`: scanning, routing, parsing, validation, middleware chain, error hierarchy, metrics sink, execution state.
 - `command-paper-adapter`: paper sender resolver, player resolver, scheduler, bridge, binder.
-- `WAPI`: enterprise showcase plugin, command implementations, SQLite repository, middleware, platform lifecycle.
+- `wapi-example`: enterprise showcase + velocity example plugin, command implementations, SQLite repository, middleware, platform lifecycle.
 
 ## 2) Main classes
 - Paper main: `me.penguinx13.wapi.WAPI`
@@ -32,8 +32,8 @@
 - Dedicated executor, connection-per-operation, async CompletionStage API.
 
 ## 8) Config examples
-- `WAPI/src/main/resources/messages.yml`
-- `WAPI/src/main/resources/database.yml`
+- `wapi-example/src/main/resources/messages.yml`
+- `wapi-example/src/main/resources/database.yml`
 
 ## 9) Platform binding code
 - Paper binding: `EnterprisePaperBootstrap` uses `PaperCommandBinder` + `PaperPlatformBridge`.
