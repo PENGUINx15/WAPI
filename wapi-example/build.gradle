@@ -4,9 +4,6 @@ plugins {
 }
 
 dependencies {
-    implementation project(':command-annotations')
-    implementation project(':command-core')
-    implementation project(':command-paper-adapter')
     implementation project(':WAPI')
 
     compileOnly 'io.papermc.paper:paper-api:1.19.4-R0.1-SNAPSHOT'
@@ -35,9 +32,6 @@ tasks.named('jar') {
     from {
         [
                 project(':WAPI').tasks.jar.archiveFile.get().asFile,
-                project(':command-annotations').tasks.jar.archiveFile.get().asFile,
-                project(':command-core').tasks.jar.archiveFile.get().asFile,
-                project(':command-paper-adapter').tasks.jar.archiveFile.get().asFile
         ].collect { zipTree(it) }
     }
     from {

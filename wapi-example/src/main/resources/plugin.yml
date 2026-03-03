@@ -1,6 +1,6 @@
-name: WAPIEnterpriseShowcase
+name: WAPIExample
 version: '${version}'
-main: me.penguinx13.wapi.WAPI
+main: me.penguinx13.wapiexample.WAPIExample
 api-version: '1.19'
 softdepend: [PlaceholderAPI]
 commands:
