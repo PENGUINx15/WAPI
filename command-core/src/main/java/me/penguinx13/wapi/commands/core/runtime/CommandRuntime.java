@@ -1,5 +1,6 @@
 package me.penguinx13.wapi.commands.core.runtime;
 
+import me.penguinx13.wapi.commands.core.completion.CompletionEngine;
 import me.penguinx13.wapi.commands.core.context.CommandContext;
 import me.penguinx13.wapi.commands.core.context.ExecutionState;
 import me.penguinx13.wapi.commands.core.error.CommandException;
@@ -11,11 +12,12 @@ import me.penguinx13.wapi.commands.core.result.CommandResult;
 import me.penguinx13.wapi.commands.core.spi.MetricsSink;
 import me.penguinx13.wapi.commands.core.spi.PlatformBridge;
 import me.penguinx13.wapi.commands.core.tree.CommandTree;
+import me.penguinx13.wapi.commands.core.tree.RouteResult;
 import me.penguinx13.wapi.commands.core.validation.ValidationService;
 
 import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.CompletableFuture;
+import java.util.Optional;
 import java.util.concurrent.CompletionStage;
 
 public final class CommandRuntime {
@@ -27,6 +29,7 @@ public final class CommandRuntime {
     private final List<CommandMiddleware> middleware;
     private final PlatformBridge platformBridge;
     private final MetricsSink metricsSink;
+    private final CompletionEngine completionEngine;
 
     public CommandRuntime(CommandTree tree,
                           CommandPipeline pipeline,
@@ -36,6 +39,18 @@ public final class CommandRuntime {
                           List<CommandMiddleware> middleware,
                           PlatformBridge platformBridge,
                           MetricsSink metricsSink) {
+        this(tree, pipeline, resolverRegistry, validationService, errorPresenter, middleware, platformBridge, metricsSink, new CompletionEngine());
+    }
+
+    public CommandRuntime(CommandTree tree,
+                          CommandPipeline pipeline,
+                          ResolverRegistry resolverRegistry,
+                          ValidationService validationService,
+                          ErrorPresenter errorPresenter,
+                          List<CommandMiddleware> middleware,
+                          PlatformBridge platformBridge,
+                          MetricsSink metricsSink,
+                          CompletionEngine completionEngine) {
         this.tree = tree;
         this.pipeline = pipeline;
         this.resolverRegistry = resolverRegistry;
@@ -44,6 +59,7 @@ public final class CommandRuntime {
         this.middleware = List.copyOf(middleware);
         this.platformBridge = platformBridge;
         this.metricsSink = metricsSink;
+        this.completionEngine = completionEngine;
     }
 
     public CommandTree tree() { return tree; }
@@ -75,5 +91,33 @@ public final class CommandRuntime {
 
     public CompletionStage<Void> executeAndRespond(CommandContext context, ExecutionState state) {
         return execute(context, state).thenCompose(result -> platformBridge.deliverResult(context, result));
+    }
+
+    public CompletionStage<List<String>> complete(CommandContext context, ExecutionState state) {
+        CommandContext completionContext = enrichContextForCompletion(context);
+        return completionEngine.complete(completionContext, state);
+    }
+
+    public CompletionStage<Void> completeAndDeliver(CommandContext context, ExecutionState state) {
+        CommandContext completionContext = enrichContextForCompletion(context);
+        return completionEngine.complete(completionContext, state)
+                .thenCompose(suggestions -> platformBridge.deliverSuggestions(completionContext, suggestions));
+    }
+
+    private CommandContext enrichContextForCompletion(CommandContext context) {
+        Optional<RouteResult> exact = tree.route(context.tokens());
+        if (exact.isPresent()) {
+            RouteResult route = exact.get();
+            return context.withRoute(route.command(), route.consumedPath(), route.capturedArguments());
+        }
+
+        if (context.tokens().isEmpty()) {
+            return context;
+        }
+
+        List<String> withoutCurrentToken = context.tokens().subList(0, context.tokens().size() - 1);
+        return tree.route(withoutCurrentToken)
+                .map(route -> context.withRoute(route.command(), route.consumedPath(), route.capturedArguments()))
+                .orElse(context);
     }
 }
