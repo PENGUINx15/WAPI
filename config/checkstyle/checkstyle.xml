@@ -6,7 +6,6 @@
 <module name="Checker">
     <property name="severity" value="error"/>
 
-    <!-- Максимальная длина строки -->
     <module name="LineLength">
         <property name="max" value="140"/>
     </module>

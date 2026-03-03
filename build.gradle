@@ -61,6 +61,11 @@ subprojects {
         }
     }
 
+    tasks.withType(Javadoc).configureEach {
+        options.addBooleanOption('Xdoclint:none', true)
+        options.encoding = 'UTF-8'
+    }
+
     if (!['WAPI', 'wapi-example'].contains(project.name)) {
         publishing {
             publications {
