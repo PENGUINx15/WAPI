@@ -6,14 +6,21 @@
 <module name="Checker">
     <property name="severity" value="error"/>
 
+    <!-- Максимальная длина строки -->
     <module name="LineLength">
         <property name="max" value="140"/>
     </module>
 
     <module name="TreeWalker">
         <module name="UnusedImports"/>
-        <module name="AvoidStarImport"/>
-        <module name="NeedBraces"/>
+        <module name="AvoidStarImport">
+            <property name="allowClassImports" value="true"/>
+            <property name="allowStaticStarImports" value="true"/>
+        </module>
+        <module name="NeedBraces">
+            <property name="allowSingleLineStatement" value="true"/>
+        </module>
+
         <module name="EmptyBlock"/>
     </module>
 </module>
