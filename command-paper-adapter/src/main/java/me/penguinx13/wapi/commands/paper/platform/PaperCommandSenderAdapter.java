@@ -8,9 +8,15 @@ import java.util.UUID;
 
 public record PaperCommandSenderAdapter(CommandSender delegate) implements CommandSenderAdapter {
     public String name() { return delegate.getName(); }
-    public UUID uniqueId() { return delegate instanceof Player p ? p.getUniqueId() : UUID.nameUUIDFromBytes(delegate.getName().getBytes()); }
+    public UUID uniqueId() {
+        return delegate instanceof Player p
+                ? p.getUniqueId()
+                : UUID.nameUUIDFromBytes(delegate.getName().getBytes());
+    }
     public boolean isPlayer() { return delegate instanceof Player; }
-    public boolean hasPermission(String permission) { return permission == null || permission.isBlank() || delegate.hasPermission(permission); }
+    public boolean hasPermission(String permission) {
+        return permission == null || permission.isBlank() || delegate.hasPermission(permission);
+    }
     public void sendMessage(String message) { delegate.sendMessage(message); }
     public Object unwrap() { return delegate; }
     public Class<?> platformSenderType() { return delegate.getClass(); }
