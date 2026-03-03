@@ -40,3 +40,13 @@ tasks.named('shadowJar') {
 tasks.named('build') {
     dependsOn tasks.named('shadowJar')
 }
+publishing {
+    publications {
+        shadow(MavenPublication) {
+            artifact(tasks.shadowJar)
+            groupId = project.group
+            artifactId = 'WAPI'
+            version = project.version
+        }
+    }
+}
