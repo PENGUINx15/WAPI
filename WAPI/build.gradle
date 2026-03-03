@@ -3,6 +3,25 @@ plugins {
     id 'maven-publish'
 }
 
+group = 'com.github.PENGUINx15'
+version = '2.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(17)
+    }
+    withSourcesJar()
+    withJavadocJar()
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://repo.papermc.io/repository/maven-public/' }
+    maven { url = 'https://oss.sonatype.org/content/groups/public/' }
+    maven { url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/' }
+    maven { url = 'https://libraries.minecraft.net/' }
+}
+
 dependencies {
     implementation project(':command-annotations')
     implementation project(':command-core')
@@ -18,23 +37,34 @@ dependencies {
     implementation 'com.google.code.gson:gson:2.8.9'
     implementation 'org.xerial:sqlite-jdbc:3.46.1.3'
 }
-
 processResources {
-    def props = [version: rootProject.version]
+    def props = [version: project.version]
     inputs.properties props
     filteringCharset 'UTF-8'
     filesMatching('plugin.yml') { expand props }
 }
-
 tasks.named('jar') {
     archiveBaseName.set('WAPI')
     archiveClassifier.set('')
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from sourceSets.main.output
+    dependsOn ':command-annotations:jar', ':command-core:jar', ':command-paper-adapter:jar'
+    from {
+        [
+                project(':command-annotations').tasks.jar.archiveFile.get().asFile,
+                project(':command-core').tasks.jar.archiveFile.get().asFile,
+                project(':command-paper-adapter').tasks.jar.archiveFile.get().asFile
+        ].collect { zipTree(it) }
+    }
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }
 }
-
+tasks.withType(Javadoc).configureEach {
+    options.encoding = 'UTF-8'
+    options.charSet = 'UTF-8'
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
 publishing {
     publications {
         mavenJava(MavenPublication) {
@@ -44,4 +74,18 @@ publishing {
             version = project.version
         }
     }
+
+    // Пример репозитория GitHub Packages (раскомментировать при необходимости)
+    /*
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/USERNAME/REPO")
+            credentials {
+                username = project.findProperty("gpr.user") ?: System.getenv("GITHUB_ACTOR")
+                password = project.findProperty("gpr.token") ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+    */
 }

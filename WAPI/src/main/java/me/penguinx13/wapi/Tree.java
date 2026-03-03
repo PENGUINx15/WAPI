@@ -23,7 +23,7 @@ public class Tree {
     }
 
     public boolean collect() {
-        if (!Tag.LOGS.isTagged(start.getType())) return false;
+        if (!Tag.LOGS.isTagged(start.getType())){ return false;}
 
         collectLogs();
         collectLeaves();
@@ -45,7 +45,7 @@ public class Tree {
             for (int dx = -1; dx <= 1; dx++) {
                 for (int dy = -1; dy <= 1; dy++) {
                     for (int dz = -1; dz <= 1; dz++) {
-                        if (dx == 0 && dy == 0 && dz == 0) continue;
+                        if (dx == 0 && dy == 0 && dz == 0) {continue;}
 
                         Block neighbor = current.getRelative(dx, dy, dz);
 

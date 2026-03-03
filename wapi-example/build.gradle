@@ -28,9 +28,18 @@ processResources {
 }
 
 tasks.named('jar') {
+    dependsOn ':WAPI:jar', ':command-annotations:jar', ':command-core:jar', ':command-paper-adapter:jar'
     archiveBaseName.set('WAPI-example')
     archiveClassifier.set('')
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        [
+                project(':WAPI').tasks.jar.archiveFile.get().asFile,
+                project(':command-annotations').tasks.jar.archiveFile.get().asFile,
+                project(':command-core').tasks.jar.archiveFile.get().asFile,
+                project(':command-paper-adapter').tasks.jar.archiveFile.get().asFile
+        ].collect { zipTree(it) }
+    }
     from {
         configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
     }

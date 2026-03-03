@@ -16,7 +16,7 @@ import java.util.UUID;
 public class CustomSkulls {
     public static ItemStack getSkull(String url) {
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
-        if(url.isEmpty())return head;
+        if(url.isEmpty()){return head;}
 
         SkullMeta headMeta = (SkullMeta) head.getItemMeta();
         GameProfile profile = new GameProfile(UUID.randomUUID(), null);
