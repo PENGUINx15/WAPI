@@ -2,7 +2,13 @@ package me.penguinx13.wapi.commands.core.tree;
 
 import me.penguinx13.wapi.commands.core.metadata.BoundCommandMethod;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 
 public final class CommandTree {
     private final CommandNode root;
@@ -94,7 +100,10 @@ public final class CommandTree {
                 return literalChildren.computeIfAbsent(token.toLowerCase(Locale.ROOT), key -> new MutableNode(token, type, null));
             }
             if (!argumentChildren.isEmpty() && !Objects.equals(argumentChildren.get(0).argumentName, argumentName)) {
-                throw new CommandTreeBuildException("Argument conflict at token '" + token + "': only one argument edge per depth is allowed.");
+                throw new CommandTreeBuildException(
+                        "Argument conflict at token '" + token
+                                + "': only one argument edge per depth is allowed."
+                );
             }
             if (argumentChildren.isEmpty()) {
                 argumentChildren.add(new MutableNode(token, type, argumentName));

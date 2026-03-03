@@ -15,6 +15,12 @@ public final class RoutingStage implements CommandStage {
         CommandRuntime runtime = context.service(CommandRuntime.class);
         RouteResult route = runtime.tree().route(context.tokens())
                 .orElseThrow(() -> new UserInputException("Unknown command."));
-        return CompletableFuture.completedFuture(StageResult.next(context.withRoute(route.command(), route.consumedPath(), route.capturedArguments())));
+
+        CommandContext routed = context.withRoute(
+                route.command(),
+                route.consumedPath(),
+                route.capturedArguments()
+        );
+        return CompletableFuture.completedFuture(StageResult.next(routed));
     }
 }

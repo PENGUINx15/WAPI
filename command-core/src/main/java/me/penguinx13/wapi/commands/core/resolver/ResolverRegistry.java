@@ -3,7 +3,10 @@ package me.penguinx13.wapi.commands.core.resolver;
 import me.penguinx13.wapi.commands.core.error.UserInputException;
 import me.penguinx13.wapi.commands.core.metadata.ArgumentMetadata;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class ResolverRegistry {

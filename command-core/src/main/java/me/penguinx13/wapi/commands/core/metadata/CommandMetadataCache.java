@@ -1,6 +1,7 @@
 package me.penguinx13.wapi.commands.core.metadata;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class CommandMetadataCache {

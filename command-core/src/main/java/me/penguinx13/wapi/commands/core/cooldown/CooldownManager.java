@@ -2,7 +2,10 @@ package me.penguinx13.wapi.commands.core.cooldown;
 
 import java.time.Duration;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public final class CooldownManager {
     private final Map<String, Long> cooldowns = new ConcurrentHashMap<>();

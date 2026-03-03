@@ -25,8 +25,22 @@ public record CommandContext(
         services = Map.copyOf(services);
     }
 
-    public static CommandContext initial(CommandSenderAdapter sender, String rawInput, List<String> tokens, Map<Class<?>, Object> services) {
-        return new CommandContext(sender, rawInput, tokens, List.of(), Map.of(), Map.of(), services, Optional.empty());
+    public static CommandContext initial(
+            CommandSenderAdapter sender,
+            String rawInput,
+            List<String> tokens,
+            Map<Class<?>, Object> services
+    ) {
+        return new CommandContext(
+                sender,
+                rawInput,
+                tokens,
+                List.of(),
+                Map.of(),
+                Map.of(),
+                services,
+                Optional.empty()
+        );
     }
 
     public CommandContext withRoute(BoundCommandMethod method, List<String> path, Map<String, String> captures) {
