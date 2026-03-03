@@ -1,6 +1,5 @@
 plugins {
     id 'java'
-    id 'com.github.johnrengelman.shadow' version '8.1.1'
     id 'maven-publish'
 }
 
@@ -28,21 +27,21 @@ processResources {
     filesMatching('plugin.yml') { expand props }
 }
 
-tasks.named('jar') { enabled = false }
-
-tasks.named('shadowJar') {
-    archiveBaseName.set('WAPI')
+tasks.named('jar') {
+    archiveBaseName.set('WAPI-example')
     archiveClassifier.set('')
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    from {
+        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
-
-tasks.named('build') { dependsOn tasks.named('shadowJar') }
 
 publishing {
     publications {
-        shadow(MavenPublication) {
-            artifact(tasks.shadowJar)
+        mavenJava(MavenPublication) {
+            artifact(tasks.jar)
             groupId = project.group
-            artifactId = 'WAPI'
+            artifactId = 'WAPI-example'
             version = project.version
         }
     }
