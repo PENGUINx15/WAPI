@@ -1,3 +1,0 @@
-prefix: "<gray>[<gold>Enterprise</gold>]</gray> "
-user-created: "{message}{prefix}<green>User {name} created, age={age}</green>"
-void-guard: "{action}<red>Void fall prevented</red>"
