@@ -9,6 +9,7 @@ dependencies {
     implementation project(':wapi-commands')
     implementation project(':wapi-commands-paper')
     implementation project(':wapi-orm')
+    implementation project(':wapi-paper')
 
     compileOnly 'io.papermc.paper:paper-api:1.19.4-R0.1-SNAPSHOT'
 }
