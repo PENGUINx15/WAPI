@@ -66,7 +66,7 @@ subprojects {
         options.encoding = 'UTF-8'
     }
 
-    if (!['WAPI', 'wapi-example'].contains(project.name)) {
+    if (!['wapi-paper', 'wapi-example-paper'].contains(project.name)) {
         publishing {
             publications {
                 mavenJava(MavenPublication) {

@@ -1,9 +1,7 @@
 rootProject.name = 'WAPI'
 
-include 'command-annotations'
-include 'command-core'
-include 'command-paper-adapter'
-include 'WAPI'
-include 'wapi-example'
-
+include 'wapi-commands'
+include 'wapi-commands-paper'
 include 'wapi-orm'
+include 'wapi-paper'
+include 'wapi-example-paper'
