@@ -5,3 +5,5 @@ include 'command-core'
 include 'command-paper-adapter'
 include 'WAPI'
 include 'wapi-example'
+
+include 'wapi-orm'
