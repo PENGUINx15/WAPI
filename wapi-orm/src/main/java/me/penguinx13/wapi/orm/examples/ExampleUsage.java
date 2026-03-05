@@ -1,6 +1,5 @@
 package me.penguinx13.wapi.orm.examples;
 
-import me.penguinx13.wapi.managers.SQLiteManager;
 import me.penguinx13.wapi.orm.Repository;
 import me.penguinx13.wapi.orm.SimpleORM;
 

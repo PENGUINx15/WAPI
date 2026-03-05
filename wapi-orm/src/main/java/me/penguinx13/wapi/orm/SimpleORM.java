@@ -1,6 +1,5 @@
 package me.penguinx13.wapi.orm;
 
-import me.penguinx13.wapi.managers.SQLiteManager;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;

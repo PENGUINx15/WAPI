@@ -3,5 +3,5 @@ plugins {
 }
 
 dependencies {
-    implementation project(':WAPI')
+    api 'org.xerial:sqlite-jdbc:3.46.1.3'
 }
