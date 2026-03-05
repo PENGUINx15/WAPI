@@ -1,0 +1,13 @@
+name: WAPIExamplePaper
+version: '${version}'
+main: me.penguinx13.wapi.examplepaper.WapiExamplePaperPlugin
+api-version: '1.19'
+commands:
+  wexample:
+    description: WAPI example command set.
+    usage: /wexample <subcommand>
+permissions:
+  wexample.stats.add:
+    default: true
+  wexample.stats.show:
+    default: true
