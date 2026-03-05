@@ -1,0 +1,21 @@
+plugins {
+    id 'java'
+}
+
+group = 'com.github.PENGUINx15'
+version = '2.0.0'
+
+dependencies {
+    implementation project(':wapi-commands')
+    implementation project(':wapi-commands-paper')
+    implementation project(':wapi-orm')
+
+    compileOnly 'io.papermc.paper:paper-api:1.19.4-R0.1-SNAPSHOT'
+}
+
+processResources {
+    def props = [version: project.version]
+    inputs.properties props
+    filteringCharset 'UTF-8'
+    filesMatching('plugin.yml') { expand props }
+}
