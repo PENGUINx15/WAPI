@@ -5,3 +5,5 @@ include 'wapi-commands-paper'
 include 'wapi-orm'
 include 'wapi-paper'
 include 'wapi-example-paper'
+
+include 'wapi-enchants'

@@ -1,5 +1,9 @@
 package me.penguinx13.wapi.examplepaper;
 
+import java.time.Duration;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import me.penguinx13.wapi.commands.core.pipeline.ArgumentParsingStage;
 import me.penguinx13.wapi.commands.core.pipeline.AuthorizationStage;
 import me.penguinx13.wapi.commands.core.pipeline.CommandPipeline;
@@ -19,7 +23,10 @@ import me.penguinx13.wapi.commands.paper.platform.PaperLogger;
 import me.penguinx13.wapi.commands.paper.platform.PaperPlatformBridge;
 import me.penguinx13.wapi.commands.paper.platform.PaperPlayerResolver;
 import me.penguinx13.wapi.commands.paper.platform.PaperScheduler;
+import me.penguinx13.wapi.examplepaper.commands.ExampleEnchantCommand;
 import me.penguinx13.wapi.examplepaper.commands.ExampleStatsCommand;
+import me.penguinx13.wapi.examplepaper.enchants.ExampleEnchantListener;
+import me.penguinx13.wapi.examplepaper.enchants.LifestealEnchant;
 import me.penguinx13.wapi.examplepaper.model.PlayerStats;
 import me.penguinx13.wapi.managers.ConfigManager;
 import me.penguinx13.wapi.managers.CooldownManager;
@@ -30,11 +37,9 @@ import me.penguinx13.wapi.orm.SimpleORM;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.time.Duration;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import wapi.enchants.api.EnchantRegistry;
+import wapi.enchants.manager.EnchantManager;
+import wapi.enchants.storage.EnchantStorage;
 
 public final class WapiExamplePaperPlugin extends JavaPlugin {
 
@@ -48,28 +53,41 @@ public final class WapiExamplePaperPlugin extends JavaPlugin {
         configManager.registerConfig("config.yml");
 
         FileConfiguration config = configManager.getConfig("config.yml");
-        String startupMessage = config.getString("messages.startup", "<green>WAPI example plugin enabled.</green>");
-        MessageManager.sendLog(this, "info", MessageManager.applyTemplate(startupMessage, Map.of("plugin", getName())));
+        String startupMessage = config.getString("messages.startup",
+                "<green>WAPI example plugin enabled.</green>");
+        MessageManager.sendLog(this, "info",
+                MessageManager.applyTemplate(startupMessage,
+                        Map.of("plugin", getName())));
 
         cooldownManager = new CooldownManager();
         UUID consoleKey = new UUID(0L, 0L);
         cooldownManager.markCooldown(consoleKey, "startup", Duration.ofSeconds(5));
 
-        sqliteManager = new SQLiteManager(getDataFolder(), "example.db", Bukkit::isPrimaryThread);
+        sqliteManager = new SQLiteManager(getDataFolder(), "example.db",
+                Bukkit::isPrimaryThread);
 
         SimpleORM orm = new SimpleORM(sqliteManager);
         orm.registerEntity(PlayerStats.class);
         Repository<PlayerStats, UUID> repository = orm.getRepository(PlayerStats.class);
 
+        EnchantRegistry enchantRegistry = new EnchantRegistry();
+        LifestealEnchant lifestealEnchant = new LifestealEnchant();
+        enchantRegistry.register(lifestealEnchant);
+        EnchantStorage enchantStorage = new EnchantStorage(this, enchantRegistry);
+        EnchantManager enchantManager = new EnchantManager(enchantStorage);
+
         CommandRegistrationService registrationService = new CommandRegistrationService();
         registrationService.register(new ExampleStatsCommand(this, repository));
+        registrationService.register(
+                new ExampleEnchantCommand(enchantStorage, lifestealEnchant));
 
         ResolverRegistry resolverRegistry = new ResolverRegistry();
         DefaultResolvers.registerDefaults(resolverRegistry);
         resolverRegistry.register(new PaperPlayerResolver());
 
         ValidationService validationService = new ValidationService();
-        PaperPlatformBridge bridge = new PaperPlatformBridge(new PaperScheduler(this));
+        PaperPlatformBridge bridge = new PaperPlatformBridge(
+                new PaperScheduler(this));
 
         CommandRuntime runtime = new CommandRuntime(
                 registrationService.buildTree(),
@@ -90,8 +108,12 @@ public final class WapiExamplePaperPlugin extends JavaPlugin {
         );
 
         new PaperCommandBinder(this, bridge).bind(runtime);
+        getServer().getPluginManager().registerEvents(
+                new ExampleEnchantListener(enchantManager), this
+        );
         if (cooldownManager.isOnCooldown(consoleKey, "startup")) {
-            MessageManager.sendLog(this, "info", "Startup cooldown manager example initialized.");
+            MessageManager.sendLog(this, "info",
+                    "Startup cooldown manager example initialized.");
         }
     }
 
