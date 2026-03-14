@@ -63,6 +63,7 @@ public final class AnnotationCommandScanner implements CommandMetadataCache.Meta
                             arg.value(),
                             p.getType(),
                             arg.optional(),
+                            arg.placeholder(),
                             arg.defaultValue(),
                             i,
                             validations,

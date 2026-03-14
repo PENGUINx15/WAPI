@@ -8,6 +8,7 @@ public record ArgumentMetadata(
         String name,
         Class<?> type,
         boolean optional,
+        String placeholder,
         String defaultValue,
         int index,
         List<Annotation> validationAnnotations,
