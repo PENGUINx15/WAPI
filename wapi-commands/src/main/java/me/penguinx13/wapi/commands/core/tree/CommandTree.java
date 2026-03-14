@@ -1,5 +1,6 @@
 package me.penguinx13.wapi.commands.core.tree;
 
+import me.penguinx13.wapi.commands.core.metadata.ArgumentMetadata;
 import me.penguinx13.wapi.commands.core.metadata.BoundCommandMethod;
 
 import java.util.ArrayList;
@@ -47,6 +48,25 @@ public final class CommandTree {
         return current.handler().map(handler -> new RouteResult(handler, List.copyOf(path), Map.copyOf(captures)));
     }
 
+    public Optional<CommandNode> resolveNode(List<String> tokens) {
+        CommandNode current = root;
+        for (String token : tokens) {
+            CommandNode literal = current.literalChildren().get(token.toLowerCase(Locale.ROOT));
+            if (literal != null) {
+                current = literal;
+                continue;
+            }
+            if (current.argumentChildren().isEmpty()) {
+                if (current.handler().isPresent()) {
+                    return Optional.of(current);
+                }
+                return Optional.empty();
+            }
+            current = current.argumentChildren().get(0);
+        }
+        return Optional.of(current);
+    }
+
     public List<String> suggestNextLiterals(List<String> tokens) {
         if (tokens.isEmpty()) {
             return root.literalChildren().values().stream()
@@ -80,23 +100,26 @@ public final class CommandTree {
     }
 
     public static final class Builder {
-        private final MutableNode root = new MutableNode("", NodeType.LITERAL, null);
+        private final MutableNode root = new MutableNode("", NodeType.LITERAL, null, null, false);
 
         public void add(BoundCommandMethod method) {
             MutableNode cursor = root;
             List<String> fullPath = new ArrayList<>();
             fullPath.add(method.metadata().root());
-            fullPath.addAll(method.metadata().path());
-            method.metadata().arguments().stream()
-                    .filter(arg -> !arg.optional())
-                    .map(arg -> "{" + arg.name() + "}")
-                    .forEach(fullPath::add);
+            cursor = cursor.child(method.metadata().root(), NodeType.LITERAL, null, null, false);
 
-            for (String token : fullPath) {
-                boolean argument = token.startsWith("{") && token.endsWith("}");
-                NodeType type = argument ? NodeType.ARGUMENT : NodeType.LITERAL;
-                String argumentName = argument ? token.substring(1, token.length() - 1) : null;
-                cursor = cursor.child(token, type, argumentName);
+            for (String token : method.metadata().path()) {
+                fullPath.add(token);
+                cursor = cursor.child(token, NodeType.LITERAL, null, null, false);
+            }
+
+            for (ArgumentMetadata argument : method.metadata().arguments()) {
+                if (argument.optional()) {
+                    continue;
+                }
+                String token = "{" + argument.name() + "}";
+                fullPath.add(token);
+                cursor = cursor.child(token, NodeType.ARGUMENT, argument.name(), argument.placeholder(), false);
             }
             if (cursor.handler != null) {
                 throw new CommandTreeBuildException("Path conflict: " + String.join(" ", fullPath));
@@ -113,19 +136,23 @@ public final class CommandTree {
         private final String token;
         private final NodeType type;
         private final String argumentName;
+        private final String argumentPlaceholder;
+        private final boolean argumentOptional;
         private BoundCommandMethod handler;
         private final Map<String, MutableNode> literalChildren = new LinkedHashMap<>();
         private final List<MutableNode> argumentChildren = new ArrayList<>();
 
-        private MutableNode(String token, NodeType type, String argumentName) {
+        private MutableNode(String token, NodeType type, String argumentName, String argumentPlaceholder, boolean argumentOptional) {
             this.token = token;
             this.type = type;
             this.argumentName = argumentName;
+            this.argumentPlaceholder = argumentPlaceholder;
+            this.argumentOptional = argumentOptional;
         }
 
-        private MutableNode child(String token, NodeType type, String argumentName) {
+        private MutableNode child(String token, NodeType type, String argumentName, String argumentPlaceholder, boolean argumentOptional) {
             if (type == NodeType.LITERAL) {
-                return literalChildren.computeIfAbsent(token.toLowerCase(Locale.ROOT), key -> new MutableNode(token, type, null));
+                return literalChildren.computeIfAbsent(token.toLowerCase(Locale.ROOT), key -> new MutableNode(token, type, null, null, false));
             }
             if (!argumentChildren.isEmpty() && !Objects.equals(argumentChildren.get(0).argumentName, argumentName)) {
                 throw new CommandTreeBuildException(
@@ -134,7 +161,7 @@ public final class CommandTree {
                 );
             }
             if (argumentChildren.isEmpty()) {
-                argumentChildren.add(new MutableNode(token, type, argumentName));
+                argumentChildren.add(new MutableNode(token, type, argumentName, argumentPlaceholder, argumentOptional));
             }
             return argumentChildren.get(0);
         }
@@ -145,7 +172,7 @@ public final class CommandTree {
                 literals.put(entry.getKey(), entry.getValue().freeze());
             }
             List<CommandNode> args = argumentChildren.stream().map(MutableNode::freeze).toList();
-            return new CommandNode(token, type, argumentName, literals, args, Optional.ofNullable(handler));
+            return new CommandNode(token, type, argumentName, argumentPlaceholder, argumentOptional, literals, args, Optional.ofNullable(handler));
         }
     }
 }
