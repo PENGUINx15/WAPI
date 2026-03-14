@@ -11,4 +11,5 @@ public @interface Arg {
     String value();
     boolean optional() default false;
     String defaultValue() default "";
+    String placeholder() default "";
 }
