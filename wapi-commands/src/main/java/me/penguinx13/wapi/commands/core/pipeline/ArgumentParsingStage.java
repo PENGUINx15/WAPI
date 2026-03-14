@@ -4,6 +4,7 @@ import me.penguinx13.wapi.commands.core.context.CommandContext;
 import me.penguinx13.wapi.commands.core.context.ExecutionState;
 import me.penguinx13.wapi.commands.core.error.UserInputException;
 import me.penguinx13.wapi.commands.core.metadata.ArgumentMetadata;
+import me.penguinx13.wapi.commands.core.help.CommandHelpGenerator;
 import me.penguinx13.wapi.commands.core.resolver.ArgumentResolver;
 import me.penguinx13.wapi.commands.core.runtime.CommandRuntime;
 
@@ -13,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 public final class ArgumentParsingStage implements CommandStage {
+    private final CommandHelpGenerator helpGenerator = new CommandHelpGenerator();
     @Override
     public CompletionStage<StageResult> execute(CommandContext context, ExecutionState state) {
         CommandRuntime runtime = context.service(CommandRuntime.class);
@@ -33,7 +35,7 @@ public final class ArgumentParsingStage implements CommandStage {
                 optionalOffset++;
             }
             if (token == null) {
-                return CompletableFuture.failedStage(new UserInputException("Missing required argument: " + argument.name()));
+                return CompletableFuture.failedStage(new UserInputException(helpGenerator.missingArgumentMessage(context, method)));
             }
             ArgumentResolver<?> resolver = runtime.resolverRegistry().resolve(argument);
             String finalToken = token;
