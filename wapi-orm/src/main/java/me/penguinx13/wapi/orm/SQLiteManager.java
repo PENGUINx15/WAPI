@@ -42,8 +42,8 @@ public final class SQLiteManager {
     }
 
     public CompletionStage<Integer> update(String sql, Object... params) {
-        ensureNotMainThread("update");
         return CompletableFuture.supplyAsync(() -> {
+            ensureNotMainThread("update");
             try (Connection connection = openConnection();
                  PreparedStatement statement = prepare(connection, sql, params)) {
                 return statement.executeUpdate();
@@ -54,8 +54,8 @@ public final class SQLiteManager {
     }
 
     public <T> CompletionStage<T> query(String sql, Object[] params, ResultSetMapper<T> mapper) {
-        ensureNotMainThread("query");
         return CompletableFuture.supplyAsync(() -> {
+            ensureNotMainThread("query");
             try (Connection connection = openConnection();
                  PreparedStatement statement = prepare(connection, sql, params);
                  ResultSet rs = statement.executeQuery()) {
