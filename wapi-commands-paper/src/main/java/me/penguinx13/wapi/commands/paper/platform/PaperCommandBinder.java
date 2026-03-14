@@ -4,7 +4,6 @@ import me.penguinx13.wapi.commands.core.context.CommandContext;
 import me.penguinx13.wapi.commands.core.context.ExecutionState;
 import me.penguinx13.wapi.commands.core.runtime.CommandRuntime;
 import me.penguinx13.wapi.commands.core.spi.PlatformCommandBinder;
-import me.penguinx13.wapi.commands.core.spi.SuggestionSink;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -46,18 +45,14 @@ public final class PaperCommandBinder implements PlatformCommandBinder {
             List<String> tokens = new ArrayList<>();
             tokens.add(alias);
             tokens.addAll(Arrays.asList(args));
-
-            SuggestionCollector collector = new SuggestionCollector();
-            Map<Class<?>, Object> services = baseServices(runtime);
-            services.put(SuggestionSink.class, collector);
-
-            CommandContext context = CommandContext.initial(bridge.adaptSender(sender), String.join(" ", tokens), tokens, services);
-            CompletableFuture<Void> completionFuture = runtime.completeAndDeliver(context, new ExecutionState()).toCompletableFuture();
-            if (!completionFuture.isDone()) {
-                return List.of();
+            if (args.length == 0) {
+                tokens.add("");
             }
-            completionFuture.join();
-            return collector.suggestions();
+
+            Map<Class<?>, Object> services = baseServices(runtime);
+            CommandContext context = CommandContext.initial(bridge.adaptSender(sender), String.join(" ", tokens), tokens, services);
+            CompletableFuture<List<String>> completionFuture = runtime.complete(context, new ExecutionState()).toCompletableFuture();
+            return completionFuture.join();
         });
     }
 
@@ -66,18 +61,5 @@ public final class PaperCommandBinder implements PlatformCommandBinder {
         services.put(CommandRuntime.class, runtime);
         services.put(me.penguinx13.wapi.commands.core.platform.PermissionEvaluator.class, new PaperPermissionEvaluator());
         return services;
-    }
-
-    private static final class SuggestionCollector implements SuggestionSink {
-        private volatile List<String> suggestions = List.of();
-
-        @Override
-        public void accept(List<String> suggestions) {
-            this.suggestions = suggestions;
-        }
-
-        private List<String> suggestions() {
-            return suggestions;
-        }
     }
 }

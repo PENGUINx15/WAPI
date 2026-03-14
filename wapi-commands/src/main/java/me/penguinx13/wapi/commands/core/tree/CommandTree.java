@@ -47,6 +47,34 @@ public final class CommandTree {
         return current.handler().map(handler -> new RouteResult(handler, List.copyOf(path), Map.copyOf(captures)));
     }
 
+    public List<String> suggestNextLiterals(List<String> tokens) {
+        if (tokens.isEmpty()) {
+            return root.literalChildren().values().stream()
+                    .map(CommandNode::token)
+                    .toList();
+        }
+
+        CommandNode current = root;
+        for (int i = 0; i < tokens.size() - 1; i++) {
+            String token = tokens.get(i);
+            CommandNode literal = current.literalChildren().get(token.toLowerCase(Locale.ROOT));
+            if (literal != null) {
+                current = literal;
+                continue;
+            }
+            if (current.argumentChildren().isEmpty()) {
+                return List.of();
+            }
+            current = current.argumentChildren().get(0);
+        }
+
+        String prefix = tokens.get(tokens.size() - 1).toLowerCase(Locale.ROOT);
+        return current.literalChildren().values().stream()
+                .map(CommandNode::token)
+                .filter(token -> token.toLowerCase(Locale.ROOT).startsWith(prefix))
+                .toList();
+    }
+
     public static Builder builder() {
         return new Builder();
     }

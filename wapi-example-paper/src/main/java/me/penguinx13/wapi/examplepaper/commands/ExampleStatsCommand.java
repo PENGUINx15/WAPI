@@ -63,6 +63,18 @@ public final class ExampleStatsCommand {
         sender.sendMessage("§aWAPI example работает.");
     }
 
+    @SubCommand("help")
+    public void help(CommandSender sender) {
+        sender.sendMessage("§6Доступные команды /wexample:");
+        sender.sendMessage(" §e/wexample help §7- показать это меню");
+        sender.sendMessage(" §e/wexample ping §7- проверить работу примера");
+        sender.sendMessage(" §e/wexample stats add <amount> §7- добавить очки");
+        sender.sendMessage(" §e/wexample stats show [player] §7- показать очки");
+        sender.sendMessage(" §e/wexample enchant add lifesteal <level> §7- наложить Lifesteal");
+        sender.sendMessage(" §e/wexample enchant remove lifesteal §7- убрать Lifesteal");
+        sender.sendMessage(" §e/wexample enchant list §7- список чар на предмете");
+    }
+
     private void runSync(Runnable action) {
         if (Bukkit.isPrimaryThread()) {
             action.run();

@@ -22,12 +22,17 @@ public final class CompletionEngine {
             return CompletableFuture.completedFuture(List.of());
         }
 
+        CommandRuntime runtime = context.service(CommandRuntime.class);
+
         var bound = context.command().orElse(null);
-        if (bound == null || bound.metadata().arguments().isEmpty()) {
-            return CompletableFuture.completedFuture(List.of());
+        if (bound == null) {
+            return CompletableFuture.completedFuture(runtime.tree().suggestNextLiterals(context.tokens()));
         }
 
-        CommandRuntime runtime = context.service(CommandRuntime.class);
+        if (bound.metadata().arguments().isEmpty()) {
+            return CompletableFuture.completedFuture(runtime.tree().suggestNextLiterals(context.tokens()));
+        }
+
         int argumentIndex = Math.min(
                 context.parsedArguments().size(),
                 bound.metadata().arguments().size() - 1
