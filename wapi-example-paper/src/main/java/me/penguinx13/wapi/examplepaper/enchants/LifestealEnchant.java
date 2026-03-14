@@ -1,6 +1,8 @@
 package me.penguinx13.wapi.examplepaper.enchants;
 
 import java.util.Set;
+
+import me.penguinx13.wapi.enchants.CustomEnchant;
 import org.bukkit.Material;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.entity.LivingEntity;
@@ -8,7 +10,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.inventory.ItemStack;
-import wapi.enchants.api.CustomEnchant;
 
 /**
  * Example enchantment that heals the attacker based on enchant level.

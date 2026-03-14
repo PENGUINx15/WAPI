@@ -30,7 +30,6 @@ import me.penguinx13.wapi.examplepaper.commands.ExampleEnchantCommand;
 import me.penguinx13.wapi.examplepaper.commands.ExampleStatsCommand;
 import me.penguinx13.wapi.examplepaper.enchants.ExampleEnchantListener;
 import me.penguinx13.wapi.examplepaper.enchants.LifestealEnchant;
-import me.penguinx13.wapi.enchants.CustomEnchant;
 import me.penguinx13.wapi.examplepaper.model.PlayerStats;
 import me.penguinx13.wapi.managers.ConfigManager;
 import me.penguinx13.wapi.managers.CooldownManager;
