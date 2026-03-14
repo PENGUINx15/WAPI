@@ -23,10 +23,14 @@ import me.penguinx13.wapi.commands.paper.platform.PaperLogger;
 import me.penguinx13.wapi.commands.paper.platform.PaperPlatformBridge;
 import me.penguinx13.wapi.commands.paper.platform.PaperPlayerResolver;
 import me.penguinx13.wapi.commands.paper.platform.PaperScheduler;
+import me.penguinx13.wapi.enchants.api.EnchantRegistry;
+import me.penguinx13.wapi.enchants.manager.EnchantManager;
+import me.penguinx13.wapi.enchants.storage.EnchantStorage;
 import me.penguinx13.wapi.examplepaper.commands.ExampleEnchantCommand;
 import me.penguinx13.wapi.examplepaper.commands.ExampleStatsCommand;
 import me.penguinx13.wapi.examplepaper.enchants.ExampleEnchantListener;
 import me.penguinx13.wapi.examplepaper.enchants.LifestealEnchant;
+import me.penguinx13.wapi.enchants.CustomEnchant;
 import me.penguinx13.wapi.examplepaper.model.PlayerStats;
 import me.penguinx13.wapi.managers.ConfigManager;
 import me.penguinx13.wapi.managers.CooldownManager;
@@ -37,9 +41,6 @@ import me.penguinx13.wapi.orm.SimpleORM;
 import org.bukkit.Bukkit;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
-import wapi.enchants.api.EnchantRegistry;
-import wapi.enchants.manager.EnchantManager;
-import wapi.enchants.storage.EnchantStorage;
 
 public final class WapiExamplePaperPlugin extends JavaPlugin {
 
@@ -72,6 +73,7 @@ public final class WapiExamplePaperPlugin extends JavaPlugin {
 
         EnchantRegistry enchantRegistry = new EnchantRegistry();
         LifestealEnchant lifestealEnchant = new LifestealEnchant();
+
         enchantRegistry.register(lifestealEnchant);
         EnchantStorage enchantStorage = new EnchantStorage(this, enchantRegistry);
         EnchantManager enchantManager = new EnchantManager(enchantStorage);

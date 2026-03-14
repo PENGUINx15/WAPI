@@ -5,11 +5,11 @@ import me.penguinx13.wapi.commands.annotations.Arg;
 import me.penguinx13.wapi.commands.annotations.Min;
 import me.penguinx13.wapi.commands.annotations.RootCommand;
 import me.penguinx13.wapi.commands.annotations.SubCommand;
+import me.penguinx13.wapi.enchants.CustomEnchant;
+import me.penguinx13.wapi.enchants.storage.EnchantStorage;
+import me.penguinx13.wapi.enchants.util.LoreUtil;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
-import wapi.enchants.api.CustomEnchant;
-import wapi.enchants.storage.EnchantStorage;
-import wapi.enchants.util.LoreUtil;
 
 /**
  * Demonstrates how to apply and inspect custom enchants through commands.

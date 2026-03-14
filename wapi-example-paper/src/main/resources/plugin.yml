@@ -1,5 +1,6 @@
 name: WAPIExamplePaper
 version: '${version}'
+depend: [WAPI]
 main: me.penguinx13.wapi.examplepaper.WapiExamplePaperPlugin
 api-version: '1.19'
 commands:

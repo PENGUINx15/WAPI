@@ -1,13 +1,14 @@
-package wapi.enchants.manager;
+package me.penguinx13.wapi.enchants.manager;
 
 import java.util.Map;
 import java.util.Objects;
+
+import me.penguinx13.wapi.enchants.CustomEnchant;
+import me.penguinx13.wapi.enchants.api.EnchantTrigger;
+import me.penguinx13.wapi.enchants.storage.EnchantStorage;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.inventory.ItemStack;
-import wapi.enchants.api.CustomEnchant;
-import wapi.enchants.api.EnchantTrigger;
-import wapi.enchants.storage.EnchantStorage;
 
 /**
  * Coordinates enchant lookup and trigger dispatch for item-based custom enchants.
@@ -32,7 +33,7 @@ public class EnchantManager {
      * @param event source event
      */
     public void trigger(final EnchantTrigger trigger, final Player player,
-            final ItemStack item, final Event event) {
+                        final ItemStack item, final Event event) {
         final Map<CustomEnchant, Integer> enchants = storage.getEnchants(item);
         for (Map.Entry<CustomEnchant, Integer> entry : enchants.entrySet()) {
             triggerToEnchant(trigger, player, item, entry.getValue(), event,

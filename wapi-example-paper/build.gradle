@@ -6,11 +6,11 @@ group = 'com.github.PENGUINx15'
 version = '2.0.0'
 
 dependencies {
-    implementation project(':wapi-commands')
-    implementation project(':wapi-commands-paper')
-    implementation project(':wapi-orm')
-    implementation project(':wapi-paper')
-    implementation project(':wapi-enchants')
+    compileOnly project(':wapi-paper')
+    compileOnly project(':wapi-commands')
+    compileOnly project(':wapi-commands-paper')
+    compileOnly project(':wapi-orm')
+    compileOnly project(':wapi-enchants')
 
     compileOnly 'io.papermc.paper:paper-api:1.19.4-R0.1-SNAPSHOT'
 }

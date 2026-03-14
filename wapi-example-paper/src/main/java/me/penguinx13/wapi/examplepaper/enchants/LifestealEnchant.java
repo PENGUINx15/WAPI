@@ -36,8 +36,8 @@ public final class LifestealEnchant extends CustomEnchant {
             return;
         }
 
-        final Double maxHealth = player.getAttribute(Attribute.MAX_HEALTH) == null
-                ? null : player.getAttribute(Attribute.MAX_HEALTH).getValue();
+        final Double maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH) == null
+                ? null : player.getAttribute(Attribute.GENERIC_MAX_HEALTH).getValue();
         if (maxHealth == null) {
             return;
         }

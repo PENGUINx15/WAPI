@@ -18,6 +18,7 @@ dependencies {
     implementation project(':wapi-commands')
     implementation project(':wapi-commands-paper')
     implementation project(':wapi-orm')
+    implementation project(':wapi-enchants')
 
     compileOnly 'io.papermc.paper:paper-api:1.19.4-R0.1-SNAPSHOT'
     compileOnly 'me.clip:placeholderapi:2.11.6'
@@ -40,12 +41,13 @@ tasks.named('jar') {
     archiveClassifier.set('')
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from sourceSets.main.output
-    dependsOn ':wapi-commands:jar', ':wapi-commands-paper:jar', ':wapi-orm:jar'
+    dependsOn ':wapi-commands:jar', ':wapi-commands-paper:jar', ':wapi-orm:jar', ':wapi-enchants:jar'
     from {
         [
                 project(':wapi-commands').tasks.jar.archiveFile.get().asFile,
                 project(':wapi-commands-paper').tasks.jar.archiveFile.get().asFile,
-                project(':wapi-orm').tasks.jar.archiveFile.get().asFile
+                project(':wapi-orm').tasks.jar.archiveFile.get().asFile,
+                project(':wapi-enchants').tasks.jar.archiveFile.get().asFile
         ].collect { zipTree(it) }
     }
     from {

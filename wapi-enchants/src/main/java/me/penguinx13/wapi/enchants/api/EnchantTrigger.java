@@ -1,4 +1,4 @@
-package wapi.enchants.api;
+package me.penguinx13.wapi.enchants.api;
 
 /**
  * Supported trigger points for custom enchant logic dispatch.

@@ -8,8 +8,8 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.inventory.ItemStack;
-import wapi.enchants.api.EnchantTrigger;
-import wapi.enchants.manager.EnchantManager;
+import me.penguinx13.wapi.enchants.api.EnchantTrigger;
+import me.penguinx13.wapi.enchants.manager.EnchantManager;
 
 /**
  * Example listener that forwards Paper events into {@link EnchantManager}.

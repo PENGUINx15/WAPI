@@ -1,4 +1,4 @@
-package wapi.enchants.api;
+package me.penguinx13.wapi.enchants;
 
 import java.util.Collections;
 import java.util.HashSet;

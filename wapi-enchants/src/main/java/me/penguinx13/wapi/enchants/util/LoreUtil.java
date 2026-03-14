@@ -1,14 +1,10 @@
-package wapi.enchants.util;
+package me.penguinx13.wapi.enchants.util;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+
+import me.penguinx13.wapi.enchants.CustomEnchant;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import wapi.enchants.api.CustomEnchant;
 
 /**
  * Utility methods for generating and applying enchantment lore entries.

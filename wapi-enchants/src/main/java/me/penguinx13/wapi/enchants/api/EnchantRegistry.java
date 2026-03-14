@@ -1,4 +1,6 @@
-package wapi.enchants.api;
+package me.penguinx13.wapi.enchants.api;
+
+import me.penguinx13.wapi.enchants.CustomEnchant;
 
 import java.util.Collection;
 import java.util.Collections;

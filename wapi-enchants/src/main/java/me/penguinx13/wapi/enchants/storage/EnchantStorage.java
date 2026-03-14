@@ -1,16 +1,17 @@
-package wapi.enchants.storage;
+package me.penguinx13.wapi.enchants.storage;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+
+import me.penguinx13.wapi.enchants.CustomEnchant;
+import me.penguinx13.wapi.enchants.api.EnchantRegistry;
 import org.bukkit.NamespacedKey;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.plugin.Plugin;
-import wapi.enchants.api.CustomEnchant;
-import wapi.enchants.api.EnchantRegistry;
 
 /**
  * Reads and writes custom enchant levels from {@link PersistentDataContainer}.
