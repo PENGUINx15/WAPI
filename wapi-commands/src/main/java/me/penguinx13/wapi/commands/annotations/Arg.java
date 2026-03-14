@@ -9,6 +9,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.PARAMETER)
 public @interface Arg {
     String value();
+    String placeholder() default "";
     boolean optional() default false;
     String defaultValue() default "";
 }

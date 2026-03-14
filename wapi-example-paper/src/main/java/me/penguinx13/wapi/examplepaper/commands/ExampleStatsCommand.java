@@ -27,7 +27,7 @@ public final class ExampleStatsCommand {
     }
 
     @SubCommand(value = "stats add", permission = "wexample.stats.add", playerOnly = true)
-    public CompletionStage<Void> add(Player sender, @Arg("amount") @Min(1) int amount) {
+    public CompletionStage<Void> add(Player sender, @Arg(value = "amount", placeholder = "amount") @Min(1) int amount) {
         return repository.findByIdAsync(sender.getUniqueId())
                 .thenCompose(existing -> {
                     PlayerStats stats = existing.orElseGet(() -> new PlayerStats(sender.getUniqueId()));
@@ -39,7 +39,7 @@ public final class ExampleStatsCommand {
     }
 
     @SubCommand(value = "stats show", permission = "wexample.stats.show")
-    public CompletionStage<Void> show(CommandSender sender, @Arg(value = "target", optional = true) Player target) {
+    public CompletionStage<Void> show(CommandSender sender, @Arg(value = "target", placeholder = "player", optional = true) Player target) {
         Player selected = target;
         if (selected == null) {
             if (!(sender instanceof Player self)) {

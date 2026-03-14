@@ -10,6 +10,8 @@ public record CommandNode(
         String token,
         NodeType type,
         String argumentName,
+        String argumentPlaceholder,
+        boolean argumentOptional,
         Map<String, CommandNode> literalChildren,
         List<CommandNode> argumentChildren,
         Optional<BoundCommandMethod> handler
