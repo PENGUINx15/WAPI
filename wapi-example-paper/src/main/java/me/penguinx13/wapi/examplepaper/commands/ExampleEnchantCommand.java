@@ -7,6 +7,7 @@ import me.penguinx13.wapi.commands.annotations.RootCommand;
 import me.penguinx13.wapi.commands.annotations.SubCommand;
 import me.penguinx13.wapi.enchants.CustomEnchant;
 import me.penguinx13.wapi.enchants.storage.EnchantStorage;
+import me.penguinx13.wapi.enchants.util.CustomEnchantItemUtil;
 import me.penguinx13.wapi.enchants.util.LoreUtil;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -19,11 +20,14 @@ public final class ExampleEnchantCommand {
 
     private final EnchantStorage enchantStorage;
     private final CustomEnchant lifestealEnchant;
+    private final CustomEnchantItemUtil itemUtil;
 
     public ExampleEnchantCommand(final EnchantStorage enchantStorage,
-            final CustomEnchant lifestealEnchant) {
+            final CustomEnchant lifestealEnchant,
+            final CustomEnchantItemUtil itemUtil) {
         this.enchantStorage = enchantStorage;
         this.lifestealEnchant = lifestealEnchant;
+        this.itemUtil = itemUtil;
     }
 
     @SubCommand(value = "enchant add lifesteal", playerOnly = true)
@@ -38,6 +42,7 @@ public final class ExampleEnchantCommand {
         try {
             enchantStorage.addEnchant(item, lifestealEnchant, level);
             LoreUtil.updateLore(item, enchantStorage.getEnchants(item));
+            itemUtil.applyGlowIfNeeded(item);
             sender.sendMessage("§aНаложено зачарование Lifesteal " + level + ".");
         } catch (IllegalArgumentException ex) {
             sender.sendMessage("§cНе удалось наложить зачарование: " + ex.getMessage());
@@ -49,6 +54,7 @@ public final class ExampleEnchantCommand {
         final ItemStack item = sender.getInventory().getItemInMainHand();
         enchantStorage.removeEnchant(item, lifestealEnchant);
         LoreUtil.updateLore(item, enchantStorage.getEnchants(item));
+        itemUtil.removeGlowIfNeeded(item);
         sender.sendMessage("§eLifesteal удалён с предмета.");
     }
 
