@@ -24,8 +24,10 @@ import me.penguinx13.wapi.commands.paper.platform.PaperPlatformBridge;
 import me.penguinx13.wapi.commands.paper.platform.PaperPlayerResolver;
 import me.penguinx13.wapi.commands.paper.platform.PaperScheduler;
 import me.penguinx13.wapi.enchants.api.EnchantRegistry;
+import me.penguinx13.wapi.enchants.listener.EnchantingTableProtectionListener;
 import me.penguinx13.wapi.enchants.manager.EnchantManager;
 import me.penguinx13.wapi.enchants.storage.EnchantStorage;
+import me.penguinx13.wapi.enchants.util.CustomEnchantItemUtil;
 import me.penguinx13.wapi.examplepaper.commands.ExampleEnchantCommand;
 import me.penguinx13.wapi.examplepaper.commands.ExampleStatsCommand;
 import me.penguinx13.wapi.examplepaper.enchants.ExampleEnchantListener;
@@ -75,12 +77,14 @@ public final class WapiExamplePaperPlugin extends JavaPlugin {
 
         enchantRegistry.register(lifestealEnchant);
         EnchantStorage enchantStorage = new EnchantStorage(this, enchantRegistry);
+        CustomEnchantItemUtil customEnchantItemUtil = new CustomEnchantItemUtil(this);
         EnchantManager enchantManager = new EnchantManager(enchantStorage);
 
         CommandRegistrationService registrationService = new CommandRegistrationService();
         registrationService.register(new ExampleStatsCommand(this, repository));
         registrationService.register(
-                new ExampleEnchantCommand(enchantStorage, lifestealEnchant));
+                new ExampleEnchantCommand(enchantStorage, lifestealEnchant,
+                        customEnchantItemUtil));
 
         ResolverRegistry resolverRegistry = new ResolverRegistry();
         DefaultResolvers.registerDefaults(resolverRegistry);
@@ -111,6 +115,9 @@ public final class WapiExamplePaperPlugin extends JavaPlugin {
         new PaperCommandBinder(this, bridge).bind(runtime);
         getServer().getPluginManager().registerEvents(
                 new ExampleEnchantListener(enchantManager), this
+        );
+        getServer().getPluginManager().registerEvents(
+                new EnchantingTableProtectionListener(customEnchantItemUtil), this
         );
         if (cooldownManager.isOnCooldown(consoleKey, "startup")) {
             MessageManager.sendLog(this, "info",
