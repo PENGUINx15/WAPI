@@ -1,6 +1,0 @@
-monitoring:
-  enabled: true
-  port: 8081
-  server-id: "survival-1"
-  token: "WAPI_SECRET"
-  cache-ms: 5000
